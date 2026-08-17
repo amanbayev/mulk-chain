@@ -86,6 +86,22 @@ interface TradingInterval {
   orderIds: Set<string>;
 }
 
+export interface AuctionWindowStatus {
+  intervalId: string;
+  assetId: string;
+  open: boolean;
+  nav: bigint;
+  collarBps: bigint;
+  collar: { min: bigint; max: bigint };
+  opensAt: string;
+  orderCount: number;
+  rejectedCount: number;
+  buyQuantity: bigint;
+  sellQuantity: bigint;
+  indicativeDemandAtNav: bigint;
+  indicativeSupplyAtNav: bigint;
+}
+
 function bookAt(price: bigint, orders: LimitOrder[]): Omit<CurvePoint, "price"> & { price: bigint } {
   let demand = 0n;
   let supply = 0n;
@@ -307,6 +323,48 @@ export class BatchAuctionEngine {
       submittedAt: order.submittedAt ?? new Date(interval.opensAt.getTime() + interval.orders.length),
     });
     return { accepted: true };
+  }
+
+  getStatus(intervalId: string): AuctionWindowStatus {
+    const interval = this.intervals.get(intervalId);
+    if (!interval) {
+      throw new Error(`Interval ${intervalId} does not exist`);
+    }
+    return this.toStatus(interval);
+  }
+
+  findOpenInterval(assetId?: string): AuctionWindowStatus | null {
+    for (const interval of this.intervals.values()) {
+      if (interval.closed) continue;
+      if (assetId && interval.assetId !== assetId) continue;
+      return this.toStatus(interval);
+    }
+    return null;
+  }
+
+  private toStatus(interval: TradingInterval): AuctionWindowStatus {
+    let buyQuantity = 0n;
+    let sellQuantity = 0n;
+    for (const order of interval.orders) {
+      if (order.side === "BUY") buyQuantity += order.quantity;
+      else sellQuantity += order.quantity;
+    }
+    const atNav = bookAt(interval.nav, interval.orders);
+    return {
+      intervalId: interval.id,
+      assetId: interval.assetId,
+      open: !interval.closed,
+      nav: interval.nav,
+      collarBps: interval.collarBps,
+      collar: collarBounds(interval.nav, interval.collarBps),
+      opensAt: interval.opensAt.toISOString(),
+      orderCount: interval.orders.length,
+      rejectedCount: interval.rejected.length,
+      buyQuantity,
+      sellQuantity,
+      indicativeDemandAtNav: atNav.demand,
+      indicativeSupplyAtNav: atNav.supply,
+    };
   }
 
   closeAndMatch(intervalId: string, closedAt: Date = new Date()): MatchedTradesBatch {

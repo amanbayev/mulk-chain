@@ -1,5 +1,6 @@
 export { BatchAuctionEngine, runPeriodicBatchAuction } from "./auction/batch-auction.engine.js";
 export type {
+  AuctionWindowStatus,
   CurvePoint,
   MatchedTrade,
   MatchedTradesBatch,
@@ -25,3 +26,15 @@ export type { DvpStatus, SettlementInstruction, SettlementRecord } from "./settl
 export { RentalYieldService, InMemoryTokenSnapshot, YieldCalculationError } from "./yield/rental-yield.service.js";
 export type { DividendLine, DividendRegister, TokenSnapshotPort } from "./yield/rental-yield.service.js";
 export type { HolderSnapshot, YieldRunInput } from "./yield/schemas.js";
+
+export { ClaimIssuerService } from "./identity/claim-issuer.service.js";
+export { ClaimTopic } from "./identity/schemas.js";
+export { KycWebhookController } from "./identity/kyc-webhook.controller.js";
+export { IdentityRegistrySyncer } from "./identity/identity-registry-syncer.service.js";
+export { MockIdentityRegistryChain } from "./identity/adapters.js";
+export { verifyHmacSha256, signHmacSha256 } from "./identity/hmac.js";
+
+export { createApiGateway } from "./api/gateway.js";
+export { createGatewayStack } from "./api/compose.js";
+export { PlatformService, MockGovOracle } from "./api/platform.service.js";
+export { buildOpenApiDocument } from "./api/openapi.js";
