@@ -5,7 +5,8 @@ test = "packages/contracts/test"
 script = "packages/contracts/script"
 libs = ["lib", "packages/contracts/lib"]
 solc_version = "0.8.24"
-via_ir = true
+# solc 0.8.24 + via_ir overflows the Yul stack on this suite ("Variable _400 is 1 too deep").
+via_ir = false
 optimizer = true
 optimizer_runs = 200
 ffi = false
@@ -14,20 +15,8 @@ cbor_metadata = false
 fs_permissions = [{ access = "read-write", path = "./" }]
 gas_reports = ["MulkToken", "EnforcementController", "IdentityRegistry", "GovOracle"]
 
-[profile.default.optimizer_details]
-yul = true
-
-[profile.default.optimizer_details.yul_details]
-stack_allocation = true
-optimizer_steps = ""
-
 [profile.default.fuzz]
 runs = 256
-
-# GitHub Actions: tests import the full ERC-3643 stack and overflow the Yul
-# allocator under via_ir. Production artifacts still use the default IR profile.
-[profile.ci]
-via_ir = false
 
 [fmt]
 line_length = 120

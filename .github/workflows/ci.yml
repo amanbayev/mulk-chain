@@ -32,13 +32,8 @@ jobs:
       - name: Install Solidity libraries
         run: npm run bootstrap
 
-      - name: Forge build (via IR)
-        run: forge build --skip test --skip script
-
       - name: Forge tests
         run: forge test -vvv
-        env:
-          FOUNDRY_PROFILE: ci
 
   vitest:
     name: Vitest
