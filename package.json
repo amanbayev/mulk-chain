@@ -21,11 +21,13 @@
     "test:backend": "npm run test -w @mulk-chain/core-backend",
     "test:e2e": "npm run test -w @mulk-chain/core-backend -- test/e2e-full-loop.spec.ts",
     "dev:web": "npm run dev -w @mulk-chain/web-app",
+    "dev:backend": "npm run dev -w @mulk-chain/core-backend",
     "build:web": "npm run build -w @mulk-chain/web-app",
     "typecheck:web": "npm run typecheck -w @mulk-chain/web-app",
     "infra:up": "docker compose up -d postgres redis",
     "anvil": "anvil --host 127.0.0.1 --port 8545 --chain-id 31337",
     "deploy:local": "node scripts/deploy-local.mjs",
+    "demo": "powershell -ExecutionPolicy Bypass -File ./start-demo.ps1",
     "lint:fmt": "forge fmt --check"
   },
   "engines": {
@@ -33,6 +35,8 @@
   },
   "license": "UNLICENSED",
   "devDependencies": {
-    "solc": "^0.8.24"
+    "concurrently": "^9.1.2",
+    "solc": "^0.8.24",
+    "wait-on": "^8.0.3"
   }
 }

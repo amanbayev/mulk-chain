@@ -151,6 +151,16 @@ npm install
 npm run bootstrap          # OpenZeppelin v5.2 + forge-std
 ```
 
+### Демо (Windows)
+
+Одна команда поднимает Postgres/Redis, Anvil, деплой, API Gateway и веб-консоль, затем открывает браузер:
+
+```bash
+npm run demo
+```
+
+Нужны Docker Desktop и Foundry (`anvil`, `forge`). Консоль: http://localhost:3000 · API: http://127.0.0.1:8787/api/v1/docs.
+
 ### Контракты
 
 ```bash

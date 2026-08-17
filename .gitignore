@@ -19,3 +19,4 @@ packages/contracts/cache/
 .DS_Store
 Thumbs.db
 .next/
+logs/
