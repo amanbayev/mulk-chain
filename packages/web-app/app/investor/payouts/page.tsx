@@ -3,6 +3,7 @@
 import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardContent } from "@/components/ui/card";
 import { PayoutTable, WaterfallLegend } from "@/components/investor/payout-table";
+import { DividendClaimCard } from "@/components/investor/yield-waterfall";
 import { MetricCard } from "@/components/investor/metric-card";
 import { formatKzt, toBigInt } from "@/lib/money";
 import { useYieldHistory } from "@/hooks/use-platform";
@@ -26,6 +27,9 @@ export default function PayoutsPage() {
         <MetricCard label="Net received" value={isLoading ? "—" : formatKzt(net)} hint={`${distributions.length} periods`} />
         <MetricCard label="SPV reserve" value="5.00%" hint="Withheld at the issuing SPV" />
         <MetricCard label="Withholding tax" value="10.00%" hint="Applied to the investor line" />
+      </div>
+      <div className="mb-6">
+        <DividendClaimCard />
       </div>
       <Card>
         <CardContent className="space-y-6 p-5">

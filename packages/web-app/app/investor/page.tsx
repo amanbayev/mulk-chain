@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { DividendClaimCard } from "@/components/investor/yield-waterfall";
 import { KycBadge } from "@/components/investor/kyc-badge";
 import { MetricCard } from "@/components/investor/metric-card";
 import { PageHeader } from "@/components/layout/page-header";
@@ -46,6 +47,9 @@ export default function InvestorDashboardPage() {
           value={data?.investorClass ?? "—"}
           hint={data?.kycValid ? "IdentityRegistry.isVerified = true" : "KYC incomplete"}
         />
+      </div>
+      <div className="mt-8">
+        <DividendClaimCard />
       </div>
       <div className="mt-8">
         <div className="mb-3 flex items-center justify-between">

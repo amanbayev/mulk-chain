@@ -5,6 +5,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { keccak256, stringToHex } from "viem";
 import { useAccount } from "wagmi";
+import { OracleLiveStatus } from "@/components/issuer/oracle-live-status";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -48,7 +49,9 @@ export function MintConsole({
   });
 
   return (
-    <div className="grid gap-6 lg:grid-cols-5">
+    <div className="space-y-6">
+      <OracleLiveStatus />
+      <div className="grid gap-6 lg:grid-cols-5">
       <Card className="lg:col-span-2">
         <CardHeader>
           <p className="label-caps">EGKN pledge inspection</p>
@@ -65,7 +68,7 @@ export function MintConsole({
           <Row label="Inspected" value={new Date(inspection.inspectedAt).toLocaleString("en-GB")} ok />
           <div className="space-y-1 border-t border-border pt-3">
             <p className="label-caps">Onchain cadastre hash</p>
-            <p className="break-all text-xs tabular text-muted-foreground">{onchainHash}</p>
+            <p className="break-all font-mono text-xs tabular text-muted-foreground">{onchainHash}</p>
             <p className="text-[11px] text-muted-foreground">keccak256 of the canonical EGKN identifier</p>
           </div>
         </CardContent>
@@ -109,6 +112,7 @@ export function MintConsole({
           ) : null}
         </CardContent>
       </Card>
+      </div>
     </div>
   );
 }
