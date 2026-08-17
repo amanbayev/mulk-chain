@@ -7,7 +7,8 @@
   "workspaces": [
     "packages/contracts",
     "packages/oracle-service",
-    "packages/core-backend"
+    "packages/core-backend",
+    "packages/web-app"
   ],
   "scripts": {
     "build": "npm run build --workspaces --if-present",
@@ -19,6 +20,9 @@
     "test:oracle": "npm run test -w @mulk-chain/oracle-service",
     "test:backend": "npm run test -w @mulk-chain/core-backend",
     "test:e2e": "npm run test -w @mulk-chain/core-backend -- test/e2e-full-loop.spec.ts",
+    "dev:web": "npm run dev -w @mulk-chain/web-app",
+    "build:web": "npm run build -w @mulk-chain/web-app",
+    "typecheck:web": "npm run typecheck -w @mulk-chain/web-app",
     "infra:up": "docker compose up -d postgres redis",
     "anvil": "anvil --host 127.0.0.1 --port 8545 --chain-id 31337",
     "deploy:local": "node scripts/deploy-local.mjs",

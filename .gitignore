@@ -18,3 +18,4 @@ packages/contracts/cache/
 .vscode/
 .DS_Store
 Thumbs.db
+.next/

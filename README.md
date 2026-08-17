@@ -45,6 +45,7 @@
 | `packages/contracts` | Solidity 0.8.24: `MulkToken`, `IdentityRegistry`, `GovOracle`, `EnforcementController` |
 | `packages/oracle-service` | Шлюз Smart Bridge / ЕГКН, EIP-712 `verifiedMint`, Notarial Fallback SOP |
 | `packages/core-backend` | Аукцион, DvP T+0, дивиденды NOI, KYC/claims, REST API Gateway |
+| `packages/web-app` | Next.js 14 App Router: кабинеты инвестора и эмитента (Tailwind, shadcn/ui, wagmi) |
 
 ### Потоки
 
@@ -175,6 +176,16 @@ npm run build -w @mulk-chain/oracle-service
 ```
 
 OpenAPI шлюза: `GET /api/v1/openapi.json`, UI — `GET /api/v1/docs` (после монтирования `createApiGateway`).
+
+### Веб-консоль
+
+```bash
+npm run dev:web            # http://127.0.0.1:3000
+```
+
+`/investor` — портфель, Baiterek Business Center, лимитный терминал (коридор NAV ±10%), история NOI.
+`/issuer` — регистрация объекта, verified mint, начисление NOI, мультисиг 3-of-5.
+Тема светлая/тёмная. Без `CORE_BACKEND_URL` BFF отдаёт демо-данные по контракту OpenAPI; при заданном URL проксирует на `packages/core-backend`.
 
 ### Переменные окружения
 
