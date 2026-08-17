@@ -22,9 +22,13 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Install Foundry
-        uses: foundry-rs/foundry-toolchain@v1
-        with:
-          version: stable
+        env:
+          FOUNDRY_DIR: ${{ runner.temp }}/foundry
+        run: |
+          set -euo pipefail
+          curl -fsSL https://foundry.paradigm.xyz | bash
+          "${FOUNDRY_DIR}/bin/foundryup" --install stable
+          echo "${FOUNDRY_DIR}/bin" >> "${GITHUB_PATH}"
 
       - name: Show Forge version
         run: forge --version
