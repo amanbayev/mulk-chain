@@ -17,8 +17,9 @@ gas_reports = ["MulkToken", "EnforcementController", "IdentityRegistry", "GovOra
 [profile.default.optimizer_details]
 yul = true
 
-[profile.default.optimizer_details.yulDetails]
-stackAllocation = true
+[profile.default.optimizer_details.yul_details]
+stack_allocation = true
+optimizer_steps = ""
 
 [profile.default.fuzz]
 runs = 256
