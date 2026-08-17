@@ -24,6 +24,11 @@ optimizer_steps = ""
 [profile.default.fuzz]
 runs = 256
 
+# GitHub Actions: tests import the full ERC-3643 stack and overflow the Yul
+# allocator under via_ir. Production artifacts still use the default IR profile.
+[profile.ci]
+via_ir = false
+
 [fmt]
 line_length = 120
 tab_width = 4
