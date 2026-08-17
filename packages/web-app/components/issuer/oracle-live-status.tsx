@@ -9,6 +9,8 @@ import { CopyButton } from "@/components/ui/copy-button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { InfoTip } from "@/components/ui/info-tip";
 import { useLoopingCountdown } from "@/hooks/use-countdown";
+import { sleep } from "@/lib/chain/client";
+import { updateCadastreStatus } from "@/lib/chain/actions";
 import { ORACLE_DEMO } from "@/lib/institutional-demo";
 import { formatDurationHms, shortHash } from "@/lib/utils";
 
@@ -42,15 +44,21 @@ export function OracleLiveStatus() {
 
   async function triggerManual(): Promise<void> {
     setChecking(true);
-    await new Promise((resolve) => window.setTimeout(resolve, 1600));
-    const nextBlock = blockNumber + 1;
-    const nextTx = `0x7f8a${nextBlock.toString(16).padStart(8, "0")}${txHash.slice(14, 62)}c92b` as `0x${string}`;
-    setBlockNumber(nextBlock);
-    setTxHash(nextTx);
-    setChecking(false);
-    toast.success("Gov-Bridge verification complete", {
-      description: `EGKN ${ORACLE_DEMO.encumbranceStatus} · block ${nextBlock.toLocaleString("en-GB")}`,
-    });
+    try {
+      const [, result] = await Promise.all([sleep(1_200), updateCadastreStatus(ORACLE_DEMO.cadastreAlias)]);
+      setBlockNumber(result.blockNumber);
+      setTxHash(result.transactionHash);
+      toast.success("Gov-Bridge verification complete", {
+        description:
+          result.mode === "anvil"
+            ? `EGKN ${ORACLE_DEMO.encumbranceStatus} · ${shortHash(result.transactionHash, 6)}`
+            : `EGKN ${ORACLE_DEMO.encumbranceStatus} · simulated (Anvil offline)`,
+      });
+    } catch {
+      toast.error("Gov-Bridge verification failed", { description: "Anvil RPC call could not be completed." });
+    } finally {
+      setChecking(false);
+    }
   }
 
   return (
@@ -111,7 +119,7 @@ export function OracleLiveStatus() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Radio className="h-4 w-4 text-cyan-400" />
-              Mock block explorer
+              Cadastre sync tx
             </DialogTitle>
             <DialogDescription>Gov-Oracle attestation included in block {blockNumber.toLocaleString("en-GB")}</DialogDescription>
           </DialogHeader>
@@ -132,6 +140,7 @@ export function OracleLiveStatus() {
                   block_number: payload.block_number,
                   inspected_at: payload.inspected_at,
                   consensus: payload.consensus,
+                  tx_hash: payload.tx_hash,
                 },
                 null,
                 2,

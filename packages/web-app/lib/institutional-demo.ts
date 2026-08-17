@@ -2,6 +2,7 @@ import { BAITEREK } from "@/lib/constants";
 
 export interface DataRoomDocument {
   id: string;
+  onchainDocId: string;
   fileName: string;
   title: string;
   description: string;
@@ -17,6 +18,7 @@ export interface DataRoomDocument {
 export const DATA_ROOM_DOCUMENTS: DataRoomDocument[] = [
   {
     id: "spv-charter",
+    onchainDocId: "BAITEREK-BC-CHARTER",
     fileName: "SPV_Articles_of_Association_AIFC_HashAnchored.pdf",
     title: "SPV Charter",
     description: "Articles of Association for Baiterek BC SPV Ltd., registered with the AIFC Registrar of Companies and hash-anchored on MulkToken.",
@@ -30,6 +32,7 @@ export const DATA_ROOM_DOCUMENTS: DataRoomDocument[] = [
   },
   {
     id: "rics-valuation",
+    onchainDocId: "BAITEREK-BC-VALUATION",
     fileName: "RICS_Red_Book_Valuation_Report_2025.pdf",
     title: "Independent Appraisal",
     description: "RICS Red Book valuation as at 31 December 2025. Independent appraisal by a Big-4 / Tier-1 valuer instructed by the Security Trustee.",
@@ -43,6 +46,7 @@ export const DATA_ROOM_DOCUMENTS: DataRoomDocument[] = [
   },
   {
     id: "security-deed",
+    onchainDocId: "BAITEREK-BC-DEED",
     fileName: "Cadastre_Mortgage_Security_Deed_KZ.pdf",
     title: "Pledge & Security Trustee agreement",
     description: "First-ranking mortgage over the EGKN parcel, registered with the Ministry of Justice of the Republic of Kazakhstan in favour of the Security Trustee.",
@@ -56,6 +60,7 @@ export const DATA_ROOM_DOCUMENTS: DataRoomDocument[] = [
   },
   {
     id: "afsa-sandbox",
+    onchainDocId: "BAITEREK-BC-SANDBOX",
     fileName: "AFSA_FinTech_Lab_Sandbox_Approval.pdf",
     title: "Regulatory Sandbox Certificate",
     description: "AFSA FinTech Lab sandbox approval for Mülk Chain tokenised units under the AIFC framework. Authorises the ERC-3643 issuance and Periodic Batch Auction.",
@@ -93,6 +98,8 @@ export const AUCTION_DEMO = {
   collarMaxUsd: 110,
   equilibriumUsd: 98.5,
   kztPerUsd: 1_000,
+  aliceStartBalance: 1_250,
+  aliceFillQty: 50,
 };
 
 export const YIELD_WATERFALL_DEMO = {

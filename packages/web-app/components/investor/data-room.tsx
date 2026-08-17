@@ -10,6 +10,7 @@ import { CopyButton } from "@/components/ui/copy-button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { InfoTip } from "@/components/ui/info-tip";
 import { DATA_ROOM_DOCUMENTS, type DataRoomDocument } from "@/lib/institutional-demo";
+import { verifyDocumentHash } from "@/lib/chain/actions";
 import { shortHash } from "@/lib/utils";
 
 function escapePdfText(value: string): string {
@@ -56,12 +57,26 @@ export function DataRoomPanel() {
 
   async function verifyOnChain(doc: DataRoomDocument): Promise<void> {
     setVerifyingId(doc.id);
-    await new Promise((resolve) => window.setTimeout(resolve, 1100));
-    setVerified((prev) => ({ ...prev, [doc.id]: true }));
-    setVerifyingId(null);
-    toast.success("SHA-256 matches on-chain anchor", {
-      description: `${doc.fileName} · block ${doc.blockNumber.toLocaleString("en-GB")}`,
-    });
+    try {
+      const result = await verifyDocumentHash(doc.onchainDocId, doc.sha256);
+      if (!result.matches) {
+        toast.error("SHA-256 does not match on-chain anchor", {
+          description: `${doc.fileName} · on-chain ${shortHash(result.onchainHash, 8)}`,
+        });
+        return;
+      }
+      setVerified((prev) => ({ ...prev, [doc.id]: true }));
+      toast.success("SHA-256 matches on-chain anchor", {
+        description:
+          result.mode === "anvil"
+            ? `${doc.fileName} · GovOracleBridge.getDocumentHash`
+            : `${doc.fileName} · simulated (Anvil offline)`,
+      });
+    } catch {
+      toast.error("Verification failed", { description: "Could not read the on-chain document hash." });
+    } finally {
+      setVerifyingId(null);
+    }
   }
 
   return (
@@ -157,10 +172,10 @@ export function DataRoomPanel() {
               <ExplorerRow label="SHA-256" value={hashDoc.sha256} mono copy />
               <ExplorerRow label="Anchor tx" value={hashDoc.onchainTx} mono copy />
               <ExplorerRow label="Block" value={hashDoc.blockNumber.toLocaleString("en-GB")} />
-              <ExplorerRow label="Mapping" value="MulkToken.documentAnchors[keccak256(fileName)]" mono />
+              <ExplorerRow label="Mapping" value={`GovOracleBridge.getDocumentHash("${hashDoc.onchainDocId}")`} mono />
               <p className="pt-1 text-[11px] text-muted-foreground">
-                Mock explorer view. The bytes32 stored on-chain is the SHA-256 digest; keccak256 is used only as the
-                mapping key.
+                GovOracleBridge.getDocumentHash stores the SHA-256 digest as bytes32. keccak256 is used only as a mapping
+                key for cadastre identifiers.
               </p>
             </div>
           ) : null}

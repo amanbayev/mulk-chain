@@ -6,11 +6,14 @@ import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { CopyButton } from "@/components/ui/copy-button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { InfoTip } from "@/components/ui/info-tip";
+import { claimDividends, readYieldState, type ChainReceiptView } from "@/lib/chain/actions";
 import { YIELD_WATERFALL_DEMO } from "@/lib/institutional-demo";
+import { BAITEREK_ASSET_ID } from "@/lib/constants";
 import { formatKzt } from "@/lib/money";
-import { cn, formatUsd } from "@/lib/utils";
+import { cn, formatUsd, shortHash } from "@/lib/utils";
 
 const W = YIELD_WATERFALL_DEMO;
 
@@ -108,27 +111,59 @@ export function YieldWaterfall({ compact = false }: { compact?: boolean }) {
 }
 
 const CLAIM_STORAGE_KEY = "mulk-demo-q3-claimed";
+const WALLET_STORAGE_KEY = "mulk-demo-usdt-wallet";
 
 export function DividendClaimCard() {
   const [open, setOpen] = useState(true);
   const [claimOpen, setClaimOpen] = useState(false);
   const [claiming, setClaiming] = useState(false);
   const [claimed, setClaimed] = useState(false);
+  const [claimableUsdt, setClaimableUsdt] = useState(W.proRataUsd);
+  const [walletUsdt, setWalletUsdt] = useState(0);
+  const [receipt, setReceipt] = useState<ChainReceiptView | null>(null);
 
   useEffect(() => {
-    setClaimed(sessionStorage.getItem(CLAIM_STORAGE_KEY) === "1");
+    const storedClaimed = sessionStorage.getItem(CLAIM_STORAGE_KEY) === "1";
+    const storedWallet = Number(sessionStorage.getItem(WALLET_STORAGE_KEY) ?? "0");
+    if (storedClaimed) {
+      setClaimed(true);
+      setClaimableUsdt(0);
+      setWalletUsdt(Number.isFinite(storedWallet) ? storedWallet : W.proRataUsd);
+    }
+    let cancelled = false;
+    void (async () => {
+      const onchain = await readYieldState(BAITEREK_ASSET_ID);
+      if (cancelled || !onchain) return;
+      setClaimableUsdt(onchain.claimableUsdt);
+      setWalletUsdt(onchain.walletUsdt);
+      setClaimed(onchain.claimableUsdt === 0 && onchain.walletUsdt > 0);
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   async function claim(): Promise<void> {
     setClaiming(true);
-    await new Promise((resolve) => window.setTimeout(resolve, 1400));
-    setClaiming(false);
-    setClaimed(true);
-    sessionStorage.setItem(CLAIM_STORAGE_KEY, "1");
-    setClaimOpen(false);
-    toast.success("Dividends claimed", {
-      description: `${formatUsd(W.proRataUsd)} / ${formatKzt(usdToTiyn(W.proRataUsd))} · ERC-3643 verified`,
-    });
+    try {
+      const result = await claimDividends(BAITEREK_ASSET_ID);
+      setClaimed(true);
+      setClaimableUsdt(result.claimableUsdt);
+      setWalletUsdt(result.walletUsdt);
+      setReceipt(result.receipt);
+      sessionStorage.setItem(CLAIM_STORAGE_KEY, "1");
+      sessionStorage.setItem(WALLET_STORAGE_KEY, String(result.walletUsdt));
+      toast.success("Dividends claimed", {
+        description:
+          result.mode === "anvil"
+            ? `+${formatUsd(result.walletUsdt)} USDT · ${shortHash(result.receipt.transactionHash, 6)}`
+            : `+${formatUsd(result.walletUsdt)} USDT · simulated (Anvil offline)`,
+      });
+    } catch {
+      toast.error("Dividend claim failed");
+    } finally {
+      setClaiming(false);
+    }
   }
 
   return (
@@ -144,6 +179,16 @@ export function DividendClaimCard() {
         <Badge variant={claimed ? "success" : "gold"}>{claimed ? "Claimed" : "Accrued"}</Badge>
       </CardHeader>
       <CardContent className="space-y-4">
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="rounded-md border border-border/80 bg-muted/20 px-3 py-2.5">
+            <p className="label-caps">Claimable</p>
+            <p className="mt-1 font-mono text-sm tabular text-cyan-400">{formatUsd(claimableUsdt)} USDT</p>
+          </div>
+          <div className="rounded-md border border-border/80 bg-muted/20 px-3 py-2.5">
+            <p className="label-caps">Wallet USDT</p>
+            <p className="mt-1 font-mono text-sm tabular">{formatUsd(walletUsdt)}</p>
+          </div>
+        </div>
         <button
           type="button"
           className="flex w-full items-center justify-between rounded-md border border-border bg-muted/20 px-3 py-2 text-left text-sm transition-colors hover:bg-muted/40"
@@ -173,32 +218,76 @@ export function DividendClaimCard() {
         </div>
 
         <Button type="button" className="w-full" disabled={claimed} onClick={() => setClaimOpen(true)}>
-          {claimed ? "Dividends claimed this period" : `Claim ${formatUsd(W.proRataUsd)}`}
+          {claimed ? "Dividends claimed this period" : `Claim ${formatUsd(claimableUsdt)}`}
         </Button>
       </CardContent>
 
-      <Dialog open={claimOpen} onOpenChange={setClaimOpen}>
+      <Dialog
+        open={claimOpen}
+        onOpenChange={(next) => {
+          setClaimOpen(next);
+          if (!next && receipt) setReceipt(null);
+        }}
+      >
         <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Claim rental dividends</DialogTitle>
-            <DialogDescription>
-              Confirm the gross-to-net split before the ERC-3643 transfer. IdentityRegistry.isVerified must remain true.
-            </DialogDescription>
-          </DialogHeader>
-          <YieldWaterfall compact />
-          <div className="flex items-start gap-2 rounded-md border border-border bg-muted/30 p-3 text-xs text-muted-foreground">
-            <Landmark className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-            <p>
-              Credit {formatUsd(W.proRataUsd)} ({formatKzt(usdToTiyn(W.proRataUsd))}) to the linked IBAN / wallet. WHT, if
-              applicable to your OnchainID class, is withheld after this split.
-            </p>
-          </div>
-          <Button type="button" className="w-full" disabled={claiming || claimed} onClick={() => void claim()}>
-            {claiming ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <ShieldCheck className="mr-1.5 h-3.5 w-3.5" />}
-            {claiming ? "Settling…" : "Claim Dividends (ERC-3643 Verified)"}
-          </Button>
+          {receipt ? (
+            <>
+              <DialogHeader>
+                <DialogTitle>Transaction receipt</DialogTitle>
+                <DialogDescription>
+                  {receipt.mode === "anvil" ? "Anvil / Foundry JSON-RPC" : "Simulated receipt (Anvil offline)"}
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-2 text-xs">
+                <ReceiptRow label="Status" value={receipt.status} />
+                <ReceiptRow label="Tx hash" value={receipt.transactionHash} copy />
+                <ReceiptRow label="Block" value={receipt.blockNumber.toLocaleString("en-GB")} />
+                <ReceiptRow label="Gas used" value={receipt.gasUsed} />
+                <ReceiptRow label="From" value={receipt.from} copy />
+                <ReceiptRow label="To" value={receipt.to} copy />
+                <ReceiptRow label="Wallet USDT" value={formatUsd(walletUsdt)} />
+                <ReceiptRow label="Claimable" value={formatUsd(claimableUsdt)} />
+              </div>
+            </>
+          ) : (
+            <>
+              <DialogHeader>
+                <DialogTitle>Claim rental dividends</DialogTitle>
+                <DialogDescription>
+                  Confirm the gross-to-net split before the ERC-3643 transfer. IdentityRegistry.isVerified must remain true.
+                </DialogDescription>
+              </DialogHeader>
+              <YieldWaterfall compact />
+              <div className="flex items-start gap-2 rounded-md border border-border bg-muted/30 p-3 text-xs text-muted-foreground">
+                <Landmark className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                <p>
+                  Credit {formatUsd(claimableUsdt)} ({formatKzt(usdToTiyn(claimableUsdt))}) to the linked IBAN / wallet. WHT, if
+                  applicable to your OnchainID class, is withheld after this split.
+                </p>
+              </div>
+              <Button type="button" className="w-full" disabled={claiming || claimed} onClick={() => void claim()}>
+                {claiming ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <ShieldCheck className="mr-1.5 h-3.5 w-3.5" />}
+                {claiming ? "Settling…" : "Claim Dividends (ERC-3643 Verified)"}
+              </Button>
+            </>
+          )}
         </DialogContent>
       </Dialog>
     </Card>
+  );
+}
+
+function ReceiptRow({ label, value, copy }: { label: string; value: string; copy?: boolean }) {
+  const truncated = value.startsWith("0x") && value.length > 18 ? shortHash(value, 8) : value;
+  return (
+    <div className="flex items-start justify-between gap-3 border-b border-border/70 py-2 last:border-0">
+      <span className="shrink-0 text-muted-foreground">{label}</span>
+      <div className="flex min-w-0 items-center gap-1">
+        <span className="break-all text-right font-mono tabular" title={value}>
+          {truncated}
+        </span>
+        {copy ? <CopyButton value={value} label={label} /> : null}
+      </div>
+    </div>
   );
 }

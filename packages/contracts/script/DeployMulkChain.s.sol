@@ -6,28 +6,59 @@ import {IdentityRegistry} from "../src/identity/IdentityRegistry.sol";
 import {GovOracle} from "../src/oracle/GovOracle.sol";
 import {MulkToken} from "../src/token/MulkToken.sol";
 import {EnforcementController} from "../src/governance/EnforcementController.sol";
+import {GovOracleBridge} from "../src/demo/GovOracleBridge.sol";
+import {BatchAuctionEngine} from "../src/demo/BatchAuctionEngine.sol";
+import {YieldVault} from "../src/demo/YieldVault.sol";
 
-/// @notice Local Anvil / testnet deploy of the Mülk Chain ERC-3643 stack.
+/// @notice Local Anvil / testnet deploy of the Mulk Chain ERC-3643 stack.
 ///         Writes addresses to `packages/core-backend/src/config/addresses.json`
 ///         for ABI merge by `scripts/deploy-local.mjs`.
+///         Locals live on storage so solc 0.8.24 compiles without via-IR.
 contract DeployMulkChain is Script {
     string public constant CADASTRE_NUMBER = "KZ-AST-2026-TOWER-01";
+    string internal constant ADDRESSES_PATH = "packages/core-backend/src/config/addresses.json";
+
+    uint256 internal deployerKey;
+    address internal deployer;
+    address internal oracleSigner;
+    address internal legal;
+    address internal compliance;
+    address internal security;
+    address internal trustee;
+    address internal operations;
+    bytes32 internal cadastreHash;
+    address internal identityAddr;
+    address internal oracleAddr;
+    address internal tokenAddr;
+    address internal enforcementAddr;
+    address internal bridgeAddr;
+    address internal auctionAddr;
+    address internal vaultAddr;
+    address internal alice;
 
     function run() external {
-        uint256 deployerKey = vm.envOr(
-            "ANVIL_PRIVATE_KEY", uint256(0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80)
-        );
-        address deployer = vm.addr(deployerKey);
+        _load();
+        _broadcast();
+        _log();
+        _writeRootJson();
+        _writeEnforcementJson();
+    }
 
-        address oracleSigner = vm.envOr("ORACLE_SIGNER", address(0x70997970C51812dc3A010C7d01b50e0d17dc79C8));
-        address legal = vm.envOr("ENFORCEMENT_LEGAL", address(0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC));
-        address compliance = vm.envOr("ENFORCEMENT_COMPLIANCE", address(0x90F79bf6EB2c4f870365E785982E1f101E93b906));
-        address security = vm.envOr("ENFORCEMENT_SECURITY", address(0x15d34AAf54267DB15019cffFbC44fF54D3b8828C));
-        address trustee = vm.envOr("ENFORCEMENT_TRUSTEE", address(0x9965507D1a55bcC2695C58ba16FB37d819B0A4dc));
-        address operations = vm.envOr("ENFORCEMENT_OPERATIONS", address(0x976EA74026E726554dB657fA54763abd0C3a0aa9));
+    function _load() internal {
+        deployerKey =
+            vm.envOr("ANVIL_PRIVATE_KEY", uint256(0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80));
+        deployer = vm.addr(deployerKey);
+        oracleSigner = vm.envOr("ORACLE_SIGNER", address(0x70997970C51812dc3A010C7d01b50e0d17dc79C8));
+        legal = vm.envOr("ENFORCEMENT_LEGAL", address(0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC));
+        compliance = vm.envOr("ENFORCEMENT_COMPLIANCE", address(0x90F79bf6EB2c4f870365E785982E1f101E93b906));
+        security = vm.envOr("ENFORCEMENT_SECURITY", address(0x15d34AAf54267DB7D7c367839AAf71A00a2C6A65));
+        trustee = vm.envOr("ENFORCEMENT_TRUSTEE", address(0x9965507D1a55bcC2695C58ba16FB37d819B0A4dc));
+        operations = vm.envOr("ENFORCEMENT_OPERATIONS", address(0x976EA74026E726554dB657fA54763abd0C3a0aa9));
+        alice = vm.envOr("DEMO_ALICE", address(0x70997970C51812dc3A010C7d01b50e0d17dc79C8));
+        cadastreHash = keccak256(bytes(CADASTRE_NUMBER));
+    }
 
-        bytes32 cadastreHash = keccak256(bytes(CADASTRE_NUMBER));
-
+    function _broadcast() internal {
         vm.startBroadcast(deployerKey);
 
         IdentityRegistry identity = new IdentityRegistry(deployer);
@@ -42,45 +73,92 @@ contract DeployMulkChain is Script {
         EnforcementController enforcement = new EnforcementController(address(token), signers);
         token.setEnforcementController(address(enforcement));
 
-        vm.stopBroadcast();
+        GovOracleBridge bridge = new GovOracleBridge();
+        BatchAuctionEngine auction = new BatchAuctionEngine(1_250);
+        YieldVault vault = new YieldVault(alice);
+        _seedDocumentHashes(bridge);
 
+        identityAddr = address(identity);
+        oracleAddr = address(oracle);
+        tokenAddr = address(token);
+        enforcementAddr = address(enforcement);
+        bridgeAddr = address(bridge);
+        auctionAddr = address(auction);
+        vaultAddr = address(vault);
+
+        vm.stopBroadcast();
+    }
+
+    function _log() internal view {
         console2.log("=== Mulk Chain deploy ===");
         console2.log("cadastre          ", CADASTRE_NUMBER);
         console2.log("cadastreHash      ", vm.toString(cadastreHash));
         console2.log("deployer          ", deployer);
         console2.log("oracleSigner      ", oracleSigner);
-        console2.log("IdentityRegistry  ", address(identity));
-        console2.log("GovOracle         ", address(oracle));
-        console2.log("MulkToken         ", address(token));
-        console2.log("Enforcement       ", address(enforcement));
+        console2.log("IdentityRegistry  ", identityAddr);
+        console2.log("GovOracle         ", oracleAddr);
+        console2.log("MulkToken         ", tokenAddr);
+        console2.log("Enforcement       ", enforcementAddr);
+        console2.log("GovOracleBridge   ", bridgeAddr);
+        console2.log("BatchAuction      ", auctionAddr);
+        console2.log("YieldVault        ", vaultAddr);
+        console2.log("Alice             ", alice);
         console2.log("Legal             ", legal);
         console2.log("Compliance        ", compliance);
         console2.log("Security          ", security);
         console2.log("Trustee           ", trustee);
         console2.log("Operations        ", operations);
+    }
 
+    function _writeRootJson() internal {
         string memory root = "root";
         vm.serializeString(root, "network", "anvil");
         vm.serializeUint(root, "chainId", 31337);
         vm.serializeString(root, "cadastreNumber", CADASTRE_NUMBER);
         vm.serializeString(root, "cadastreHash", vm.toString(cadastreHash));
+        _writeRootAddresses(root);
+    }
+
+    function _writeRootAddresses(
+        string memory root
+    ) internal {
         vm.serializeAddress(root, "deployer", deployer);
         vm.serializeAddress(root, "oracleSigner", oracleSigner);
-        vm.serializeAddress(root, "IdentityRegistry", address(identity));
-        vm.serializeAddress(root, "GovOracle", address(oracle));
-        vm.serializeAddress(root, "MulkToken", address(token));
-        string memory rootJson = vm.serializeAddress(root, "EnforcementController", address(enforcement));
+        vm.serializeAddress(root, "IdentityRegistry", identityAddr);
+        vm.serializeAddress(root, "GovOracle", oracleAddr);
+        vm.serializeAddress(root, "MulkToken", tokenAddr);
+        vm.serializeAddress(root, "EnforcementController", enforcementAddr);
+        vm.serializeAddress(root, "GovOracleBridge", bridgeAddr);
+        vm.serializeAddress(root, "BatchAuctionEngine", auctionAddr);
+        string memory rootJson = vm.serializeAddress(root, "YieldVault", vaultAddr);
+        vm.writeJson(rootJson, ADDRESSES_PATH);
+    }
 
-        string memory path = "packages/core-backend/src/config/addresses.json";
-        vm.writeJson(rootJson, path);
+    function _seedDocumentHashes(
+        GovOracleBridge bridge
+    ) internal {
+        bridge.setDocumentHash(
+            "BAITEREK-BC-CHARTER", bytes32(0xa7c31e9f4b8d2a1056e0c94f7d1b3a8e2c5f90d6b4a1e7c3f8d2b6a0e5c19f44)
+        );
+        bridge.setDocumentHash(
+            "BAITEREK-BC-VALUATION", bytes32(0xc0b8d41a93e7f25610d4c8a9e2b7f3d1a6c0e85b4f29d7a3c1e6b0d48f5a27c9)
+        );
+        bridge.setDocumentHash(
+            "BAITEREK-BC-DEED", bytes32(0xe15f90b2c7a4d8e36b1c0f9a5d2e7c4b8a0f3d16e9c2b5a7d4f0e8c1b3a695d2)
+        );
+        bridge.setDocumentHash(
+            "BAITEREK-BC-SANDBOX", bytes32(0x9d2a6c4e1b8f0a735c9e2d4b6a1f8c0e3d5b7a92f4c1e6d0b8a3f5c7e19d2a60)
+        );
+    }
 
+    function _writeEnforcementJson() internal {
         string memory enf = "enforcement";
         vm.serializeAddress(enf, "legal", legal);
         vm.serializeAddress(enf, "compliance", compliance);
         vm.serializeAddress(enf, "security", security);
         vm.serializeAddress(enf, "trustee", trustee);
         string memory enfJson = vm.serializeAddress(enf, "operations", operations);
-        vm.writeJson(enfJson, path, ".enforcement");
+        vm.writeJson(enfJson, ADDRESSES_PATH, ".enforcement");
         console2.log("wrote packages/core-backend/src/config/addresses.json");
     }
 }

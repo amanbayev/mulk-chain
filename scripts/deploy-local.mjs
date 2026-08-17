@@ -9,6 +9,7 @@ const pk =
   "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
 const addressesPath = path.join(root, "packages/core-backend/src/config/addresses.json");
 const contractsPath = path.join(root, "packages/core-backend/src/config/contracts.json");
+const webDeployedPath = path.join(root, "packages/web-app/lib/chain/deployed.json");
 const outDir = path.join(root, "packages/contracts/out");
 
 function readAbi(contractFile, contractName) {
@@ -81,6 +82,23 @@ const contracts = {
 
 fs.mkdirSync(path.dirname(contractsPath), { recursive: true });
 fs.writeFileSync(contractsPath, `${JSON.stringify(contracts, null, 2)}\n`);
+
+const webDeployed = {
+  chainId: 31337,
+  rpcUrl: rpc,
+  deployer: addresses.deployer,
+  alice: addresses.oracleSigner,
+  GovOracleBridge: addresses.GovOracleBridge,
+  BatchAuctionEngine: addresses.BatchAuctionEngine,
+  YieldVault: addresses.YieldVault,
+  MulkToken: addresses.MulkToken,
+  GovOracle: addresses.GovOracle,
+};
+fs.mkdirSync(path.dirname(webDeployedPath), { recursive: true });
+fs.writeFileSync(webDeployedPath, `${JSON.stringify(webDeployed, null, 2)}\n`);
+
 console.log("[deploy:local] wrote", path.relative(root, contractsPath));
+console.log("[deploy:local] wrote", path.relative(root, webDeployedPath));
 console.log("[deploy:local] MulkToken", contracts.contracts.MulkToken.address);
+console.log("[deploy:local] GovOracleBridge", addresses.GovOracleBridge);
 console.log("[deploy:local] cadastre", contracts.cadastreNumber);
