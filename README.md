@@ -1,5 +1,12 @@
 # Mülk Chain
 
+[![Foundry Tests](https://img.shields.io/badge/Foundry-19%20passed-brightgreen.svg)](packages/contracts)
+[![Vitest Tests](https://img.shields.io/badge/Vitest-11%20passed-brightgreen.svg)](packages/core-backend)
+[![ERC Standard](https://img.shields.io/badge/Standard-ERC--3643%20(T--REX)-blue.svg)](https://erc3643.org)
+[![Jurisdiction](https://img.shields.io/badge/Jurisdiction-AIFC%20%2F%20Kazakhstan-orange.svg)](#)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue.svg)](packages/core-backend)
+[![Solidity](https://img.shields.io/badge/Solidity-0.8.24-lightgrey.svg)](packages/contracts)
+
 Инфраструктура токенизации коммерческой недвижимости (RWA) в юрисдикции **МФЦА (AIFC, Казахстан)**. Ончейн-состояние синхронизируется с государственным кадастром **ЕГКН** через Gov-Oracle / Smart Bridge.
 
 Монорепозиторий: смарт-контракты ERC-3643 / T-REX, шлюз кадастрового оракула, клиринг Periodic Batch Auction, расчёты DvP T+0, Identity & Compliance Hub и REST API Gateway.
