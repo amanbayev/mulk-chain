@@ -59,54 +59,28 @@ contract DeployMulkChain is Script {
         console2.log("Trustee           ", trustee);
         console2.log("Operations        ", operations);
 
-        string memory json = string.concat(
-            "{\n",
-            '  "network": "anvil",\n',
-            '  "chainId": 31337,\n',
-            '  "cadastreNumber": "',
-            CADASTRE_NUMBER,
-            '",\n',
-            '  "cadastreHash": "',
-            vm.toString(cadastreHash),
-            '",\n',
-            '  "deployer": "',
-            vm.toString(deployer),
-            '",\n',
-            '  "oracleSigner": "',
-            vm.toString(oracleSigner),
-            '",\n',
-            '  "IdentityRegistry": "',
-            vm.toString(address(identity)),
-            '",\n',
-            '  "GovOracle": "',
-            vm.toString(address(oracle)),
-            '",\n',
-            '  "MulkToken": "',
-            vm.toString(address(token)),
-            '",\n',
-            '  "EnforcementController": "',
-            vm.toString(address(enforcement)),
-            '",\n',
-            '  "enforcement": {\n',
-            '    "legal": "',
-            vm.toString(legal),
-            '",\n',
-            '    "compliance": "',
-            vm.toString(compliance),
-            '",\n',
-            '    "security": "',
-            vm.toString(security),
-            '",\n',
-            '    "trustee": "',
-            vm.toString(trustee),
-            '",\n',
-            '    "operations": "',
-            vm.toString(operations),
-            '"\n',
-            "  }\n",
-            "}\n"
-        );
-        vm.writeFile("packages/core-backend/src/config/addresses.json", json);
+        string memory root = "root";
+        vm.serializeString(root, "network", "anvil");
+        vm.serializeUint(root, "chainId", 31337);
+        vm.serializeString(root, "cadastreNumber", CADASTRE_NUMBER);
+        vm.serializeString(root, "cadastreHash", vm.toString(cadastreHash));
+        vm.serializeAddress(root, "deployer", deployer);
+        vm.serializeAddress(root, "oracleSigner", oracleSigner);
+        vm.serializeAddress(root, "IdentityRegistry", address(identity));
+        vm.serializeAddress(root, "GovOracle", address(oracle));
+        vm.serializeAddress(root, "MulkToken", address(token));
+        string memory rootJson = vm.serializeAddress(root, "EnforcementController", address(enforcement));
+
+        string memory path = "packages/core-backend/src/config/addresses.json";
+        vm.writeJson(rootJson, path);
+
+        string memory enf = "enforcement";
+        vm.serializeAddress(enf, "legal", legal);
+        vm.serializeAddress(enf, "compliance", compliance);
+        vm.serializeAddress(enf, "security", security);
+        vm.serializeAddress(enf, "trustee", trustee);
+        string memory enfJson = vm.serializeAddress(enf, "operations", operations);
+        vm.writeJson(enfJson, path, ".enforcement");
         console2.log("wrote packages/core-backend/src/config/addresses.json");
     }
 }

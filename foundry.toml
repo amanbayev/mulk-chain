@@ -14,6 +14,12 @@ cbor_metadata = false
 fs_permissions = [{ access = "read-write", path = "./" }]
 gas_reports = ["MulkToken", "EnforcementController", "IdentityRegistry", "GovOracle"]
 
+[profile.default.optimizer_details]
+yul = true
+
+[profile.default.optimizer_details.yulDetails]
+stackAllocation = true
+
 [profile.default.fuzz]
 runs = 256
 
