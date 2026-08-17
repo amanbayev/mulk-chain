@@ -6,6 +6,6 @@
   "scripts": {
     "build": "forge build",
     "test": "forge test -vvv",
-    "fmt": "forge fmt"
+    "deploy": "forge script script/DeployMulkChain.s.sol:DeployMulkChain --rpc-url http://127.0.0.1:8545 --broadcast -vvv"
   }
 }

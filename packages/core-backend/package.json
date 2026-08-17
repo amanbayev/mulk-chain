@@ -9,7 +9,8 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:e2e": "vitest run test/e2e-full-loop.spec.ts"
   },
   "dependencies": {
     "ethers": "^6.13.4",

@@ -18,6 +18,10 @@
     "test:contracts": "forge test -vvv",
     "test:oracle": "npm run test -w @mulk-chain/oracle-service",
     "test:backend": "npm run test -w @mulk-chain/core-backend",
+    "test:e2e": "npm run test -w @mulk-chain/core-backend -- test/e2e-full-loop.spec.ts",
+    "infra:up": "docker compose up -d postgres redis",
+    "anvil": "anvil --host 127.0.0.1 --port 8545 --chain-id 31337",
+    "deploy:local": "node scripts/deploy-local.mjs",
     "lint:fmt": "forge fmt --check"
   },
   "engines": {

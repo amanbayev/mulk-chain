@@ -1,7 +1,12 @@
 import { createHash, randomUUID } from "node:crypto";
-import { BatchAuctionEngine } from "../auction/batch-auction.engine.js";
+import { BatchAuctionEngine, type MatchedTrade, type MatchedTradesBatch } from "../auction/batch-auction.engine.js";
 import type { InvestorComplianceRecord } from "../identity/kyc-webhook.controller.js";
+import { FifoQueue } from "../infra/fifo-queue.js";
+import type { BankEscrowGateway, IdentityRegistryGateway, MulkTokenEscrowGateway } from "../settlement/adapters.js";
+import { DvpOrchestratorService } from "../settlement/dvp-orchestrator.service.js";
+import type { SettlementRecord } from "../settlement/types.js";
 import { RentalYieldService, type DividendRegister } from "../yield/rental-yield.service.js";
+import type { HolderSnapshot } from "../yield/schemas.js";
 import { ApiError } from "./errors.js";
 import type { InitKycBody, MintRequestBody, RegisterAssetBody, SubmitOrderBody, TriggerYieldBody } from "./schemas.js";
 
@@ -21,12 +26,36 @@ export interface InvestorProfile {
   investorId: string;
   wallet: string;
   onchainId: string;
+  iban: string;
+  whtBps: bigint;
   email?: string;
   country: string;
   provider: string;
   applicantId: string;
   onboardingUrl: string;
   status: "PENDING_KYC" | "VERIFIED" | "REJECTED";
+}
+
+export interface CreditableBank {
+  credit(iban: string, amount: bigint): void;
+  balances: Map<string, bigint>;
+}
+
+export interface CreditableTokenEscrow extends MulkTokenEscrowGateway {
+  credit(wallet: string, amount: bigint): void;
+  balances: Map<string, bigint>;
+}
+
+export interface PlatformSettlementPorts {
+  dvp: DvpOrchestratorService;
+  bank: BankEscrowGateway & CreditableBank;
+  token: CreditableTokenEscrow;
+  identity: IdentityRegistryGateway;
+}
+
+export interface ClearAndSettleResult {
+  batch: MatchedTradesBatch;
+  settlements: SettlementRecord[];
 }
 
 export interface LedgerTx {
@@ -85,6 +114,8 @@ export class PlatformService {
     readonly yieldService: RentalYieldService,
     readonly govOracle: GovOraclePort,
     private readonly compliance: { investors: Map<string, InvestorComplianceRecord> },
+    readonly settlement?: PlatformSettlementPorts,
+    readonly clearingQueue: FifoQueue<MatchedTradesBatch> = new FifoQueue("clearing-batches"),
   ) {}
 
   initKyc(body: InitKycBody): InvestorProfile {
@@ -93,6 +124,8 @@ export class PlatformService {
       investorId: body.investorId,
       wallet: body.wallet,
       onchainId: body.onchainId,
+      iban: body.iban ?? `KZ-IBAN-${body.investorId}`,
+      whtBps: body.whtBps ?? 0n,
       email: body.email,
       country: body.country,
       provider: body.provider,
@@ -209,7 +242,41 @@ export class PlatformService {
     });
     const id = randomUUID();
     this.mintRequests.push({ id, assetId: body.assetId, to: body.to, amount: body.amount, ...proof });
+    this.settlement?.token.credit(body.to, body.amount);
+    const holder = this.findByWallet(body.to);
+    if (holder) {
+      this.addBalance(holder.investorId, body.assetId, body.amount);
+      this.pushTx(holder.investorId, {
+        id,
+        at: new Date().toISOString(),
+        type: "MINT",
+        assetId: body.assetId,
+        quantity: body.amount,
+        note: `verified mint ${body.amount.toString()} → ${body.to}`,
+      });
+    }
     return { mintRequestId: id, assetId: body.assetId, ...proof, status: "PROOF_ISSUED" as const };
+  }
+
+  async clearAndSettle(intervalId: string): Promise<ClearAndSettleResult> {
+    const batch = this.auction.closeAndMatch(intervalId);
+    await this.clearingQueue.push(batch);
+    const settlements: SettlementRecord[] = [];
+    if (!this.settlement || batch.trades.length === 0) {
+      return { batch, settlements };
+    }
+    for (const trade of batch.trades) {
+      const record = await this.settleTrade(trade, batch.assetId);
+      settlements.push(record);
+      if (record.status !== "SETTLED") {
+        throw new ApiError(
+          409,
+          "DVP_FAILED",
+          record.failure?.message ?? `DvP instruction ${trade.tradeId} did not settle`,
+        );
+      }
+    }
+    return { batch, settlements };
   }
 
   async triggerYield(body: TriggerYieldBody): Promise<DividendRegister> {
@@ -221,7 +288,8 @@ export class PlatformService {
       recordDate: body.recordDate,
       grossRentalIncomeTiyn: body.grossRentalIncomeTiyn,
       operatingExpensesTiyn: body.operatingExpensesTiyn,
-      holders: body.holders,
+      spvReserveBps: BigInt(asset.spvReserveBps),
+      holders: body.holders && body.holders.length > 0 ? body.holders : this.snapshotHolders(body.assetId),
     });
     for (const line of register.lines) {
       const list = this.yieldHistory.get(line.investorId) ?? [];
@@ -243,6 +311,64 @@ export class PlatformService {
     const profile = this.profiles.get(investorId);
     if (!profile) throw new ApiError(404, "INVESTOR_NOT_FOUND", `unknown investor ${investorId}`);
     return profile;
+  }
+
+  private findByWallet(wallet: string): InvestorProfile | undefined {
+    const target = wallet.toLowerCase();
+    return [...this.profiles.values()].find((profile) => profile.wallet.toLowerCase() === target);
+  }
+
+  private addBalance(investorId: string, assetId: string, delta: bigint): void {
+    const row = this.balances.get(investorId) ?? new Map<string, bigint>();
+    const next = (row.get(assetId) ?? 0n) + delta;
+    if (next < 0n) {
+      throw new ApiError(409, "INSUFFICIENT_TOKENS", `investor ${investorId} cannot debit ${assetId}`);
+    }
+    row.set(assetId, next);
+    this.balances.set(investorId, row);
+  }
+
+  private snapshotHolders(assetId: string): HolderSnapshot[] {
+    const holders: HolderSnapshot[] = [];
+    for (const [investorId, assets] of this.balances) {
+      const balance = assets.get(assetId) ?? 0n;
+      if (balance <= 0n) continue;
+      const profile = this.profiles.get(investorId);
+      if (!profile) continue;
+      holders.push({
+        investorId,
+        wallet: profile.wallet,
+        iban: profile.iban,
+        balance,
+        whtBps: profile.whtBps,
+      });
+    }
+    return holders;
+  }
+
+  private async settleTrade(trade: MatchedTrade, assetId: string): Promise<SettlementRecord> {
+    if (!this.settlement) {
+      throw new ApiError(500, "SETTLEMENT_UNAVAILABLE", "DvP orchestrator is not wired");
+    }
+    const buyer = this.requireProfile(trade.buyerId);
+    const seller = this.requireProfile(trade.sellerId);
+    const record = await this.settlement.dvp.settle({
+      id: trade.tradeId,
+      buyerId: trade.buyerId,
+      sellerId: trade.sellerId,
+      tokenAssetId: assetId,
+      tokenAmount: trade.quantity,
+      kztTiyn: trade.cashAmount,
+      buyerWallet: buyer.wallet,
+      sellerWallet: seller.wallet,
+      buyerIban: buyer.iban,
+      sellerIban: seller.iban,
+    });
+    if (record.status === "SETTLED") {
+      this.addBalance(seller.investorId, assetId, -trade.quantity);
+      this.addBalance(buyer.investorId, assetId, trade.quantity);
+    }
+    return record;
   }
 
   private pushTx(investorId: string, tx: LedgerTx): void {

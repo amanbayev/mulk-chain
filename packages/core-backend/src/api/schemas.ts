@@ -2,7 +2,7 @@ import { z } from "zod";
 import { AuctionSideSchema } from "../auction/schemas.js";
 import { AddressSchema, KycProviderSchema } from "../identity/schemas.js";
 import { HolderSnapshotSchema } from "../yield/schemas.js";
-import { NonNegativeBigIntSchema, PositiveBigIntSchema } from "../lib/zod-bigint.js";
+import { BpsSchema, NonNegativeBigIntSchema, PositiveBigIntSchema } from "../lib/zod-bigint.js";
 
 export const InitKycBodySchema = z.object({
   investorId: z.string().min(1),
@@ -11,6 +11,8 @@ export const InitKycBodySchema = z.object({
   provider: KycProviderSchema.default("SUMSUB"),
   email: z.string().email().optional(),
   country: z.string().min(2).max(2).default("KZ"),
+  iban: z.string().min(1).optional(),
+  whtBps: BpsSchema.optional(),
 });
 
 export const SubmitOrderBodySchema = z.object({

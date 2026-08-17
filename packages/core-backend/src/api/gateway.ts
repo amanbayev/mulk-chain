@@ -1,7 +1,6 @@
 import { Hono } from "hono";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
 import { ZodError } from "zod";
-import type { BatchAuctionEngine } from "../auction/batch-auction.engine.js";
 import { WebhookSignatureError } from "../identity/hmac.js";
 import type { KycWebhookController } from "../identity/kyc-webhook.controller.js";
 import { AuctionController } from "./auction.controller.js";
@@ -13,7 +12,6 @@ import type { PlatformService } from "./platform.service.js";
 
 export interface GatewayDeps {
   platform: PlatformService;
-  auction: BatchAuctionEngine;
   kycWebhook: KycWebhookController;
   adminApiKey: string;
 }
@@ -23,7 +21,7 @@ export function createApiGateway(deps: GatewayDeps): Hono {
 
   new InvestorController(deps.platform).register(app);
   new IssuerController(deps.platform).register(app);
-  new AuctionController(deps.auction, deps.adminApiKey).register(app);
+  new AuctionController(deps.platform, deps.adminApiKey).register(app);
 
   app.post("/api/v1/webhooks/kyc/:provider", async (c) => {
     const rawBody = await c.req.text();

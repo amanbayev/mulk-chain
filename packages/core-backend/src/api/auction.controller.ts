@@ -1,7 +1,7 @@
 import { timingSafeEqual } from "node:crypto";
 import type { Hono } from "hono";
-import type { BatchAuctionEngine } from "../auction/batch-auction.engine.js";
 import { ApiError, respond } from "./errors.js";
+import type { PlatformService } from "./platform.service.js";
 import { ClearAuctionBodySchema } from "./schemas.js";
 
 export const auctionOpenApi = [
@@ -21,7 +21,7 @@ export const auctionOpenApi = [
 
 export class AuctionController {
   constructor(
-    private readonly auction: BatchAuctionEngine,
+    private readonly platform: PlatformService,
     private readonly adminApiKey: string,
   ) {}
 
@@ -30,8 +30,8 @@ export class AuctionController {
       const assetId = c.req.query("assetId");
       const intervalId = c.req.query("intervalId");
       const status = intervalId
-        ? this.auction.getStatus(intervalId)
-        : this.auction.findOpenInterval(assetId);
+        ? this.platform.auction.getStatus(intervalId)
+        : this.platform.auction.findOpenInterval(assetId);
       if (!status) {
         throw new ApiError(404, "NO_AUCTION", "no matching auction window");
       }
@@ -46,12 +46,12 @@ export class AuctionController {
       this.assertAdmin(c.req.header("x-admin-key") ?? c.req.header("authorization"));
       const body = ClearAuctionBodySchema.parse((await c.req.json().catch(() => ({}))) as unknown);
       const status = body.intervalId
-        ? this.auction.getStatus(body.intervalId)
-        : this.auction.findOpenInterval(body.assetId);
+        ? this.platform.auction.getStatus(body.intervalId)
+        : this.platform.auction.findOpenInterval(body.assetId);
       if (!status || !status.open) {
         throw new ApiError(409, "NO_OPEN_AUCTION", "no open auction window to clear");
       }
-      const batch = this.auction.closeAndMatch(status.intervalId);
+      const { batch, settlements } = await this.platform.clearAndSettle(status.intervalId);
       return respond(c, {
         intervalId: batch.intervalId,
         batchId: batch.batchId,
@@ -59,6 +59,16 @@ export class AuctionController {
         equilibriumPrice: batch.equilibriumPrice,
         executableVolume: batch.executableVolume,
         tradeCount: batch.trades.length,
+        trades: batch.trades,
+        settlements: settlements.map((record) => ({
+          instructionId: record.instruction.id,
+          status: record.status,
+          cashReleased: record.cashReleased,
+          tokensReleased: record.tokensReleased,
+          cashLock: record.cashLock,
+          tokenLock: record.tokenLock,
+          saga: record.saga,
+        })),
       });
     });
   }

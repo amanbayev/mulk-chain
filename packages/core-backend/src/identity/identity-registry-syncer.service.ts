@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { IdentityRegistryPort } from "./adapters.js";
 import type { IssuedClaim } from "./claim-issuer.service.js";
+import { FifoQueue } from "../infra/fifo-queue.js";
 
 export type SyncJobType = "REGISTER_IDENTITY" | "SET_CLAIM";
 
@@ -35,7 +36,7 @@ export interface SyncResult {
  * Jobs are FIFO; registerIdentity is always enqueued before claims for the same wallet.
  */
 export class IdentityRegistrySyncer {
-  readonly queue: SyncJob[] = [];
+  readonly fifo: FifoQueue<SyncJob>;
   readonly processed: SyncResult[] = [];
   private timer: ReturnType<typeof setInterval> | null = null;
   private running = false;
@@ -43,7 +44,14 @@ export class IdentityRegistrySyncer {
   constructor(
     private readonly registry: IdentityRegistryPort,
     private readonly maxAttempts = 5,
-  ) {}
+    fifo?: FifoQueue<SyncJob>,
+  ) {
+    this.fifo = fifo ?? new FifoQueue<SyncJob>("identity-registry");
+  }
+
+  get queue(): SyncJob[] {
+    return this.fifo.items;
+  }
 
   enqueueRegister(wallet: string, onchainId: string): RegisterIdentityJob {
     const job: RegisterIdentityJob = { id: randomUUID(), type: "REGISTER_IDENTITY", wallet, onchainId, attempts: 0 };

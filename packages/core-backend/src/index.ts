@@ -38,3 +38,5 @@ export { createApiGateway } from "./api/gateway.js";
 export { createGatewayStack } from "./api/compose.js";
 export { PlatformService, MockGovOracle } from "./api/platform.service.js";
 export { buildOpenApiDocument } from "./api/openapi.js";
+export { FifoQueue, loadInfraEnv } from "./infra/fifo-queue.js";
+export { loadContractsConfig } from "./config/load-contracts.js";
