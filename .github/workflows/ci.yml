@@ -26,7 +26,7 @@ jobs:
           set -euo pipefail
           curl -fsSL https://foundry.paradigm.xyz | bash
           export PATH="${HOME}/.foundry/bin:${PATH}"
-          foundryup --install stable
+          "${HOME}/.foundry/bin/foundryup" --install stable
           echo "${HOME}/.foundry/bin" >> "${GITHUB_PATH}"
 
       - name: Show Forge version
