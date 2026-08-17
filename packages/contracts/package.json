@@ -1,0 +1,11 @@
+{
+  "name": "@mulk-chain/contracts",
+  "version": "1.0.0",
+  "private": true,
+  "description": "ERC-3643 MülkToken, GovOracle and 3-of-5 EnforcementController",
+  "scripts": {
+    "build": "forge build",
+    "test": "forge test -vvv",
+    "fmt": "forge fmt"
+  }
+}

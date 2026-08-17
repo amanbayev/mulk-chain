@@ -1,0 +1,30 @@
+{
+  "name": "mulk-chain",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Mülk Chain — RWA tokenization infrastructure for commercial real estate (AIFC / EGKN)",
+  "packageManager": "pnpm@9.12.0",
+  "workspaces": [
+    "packages/contracts",
+    "packages/oracle-service",
+    "packages/core-backend"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces --if-present",
+    "bootstrap": "node scripts/bootstrap-libs.mjs",
+    "build:contracts": "forge build",
+    "compile:contracts": "node scripts/compile-contracts.mjs",
+    "test": "npm run test --workspaces --if-present",
+    "test:contracts": "forge test -vvv",
+    "test:oracle": "npm run test -w @mulk-chain/oracle-service",
+    "test:backend": "npm run test -w @mulk-chain/core-backend",
+    "lint:fmt": "forge fmt --check"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "license": "UNLICENSED",
+  "devDependencies": {
+    "solc": "^0.8.24"
+  }
+}

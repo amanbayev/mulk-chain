@@ -1,0 +1,21 @@
+{
+  "name": "@mulk-chain/oracle-service",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "EGKN / Smart Bridge Gov-Oracle gateway for verifiedMint proofs",
+  "main": "dist/cadastre.service.js",
+  "types": "dist/cadastre.service.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "tsx --test src/cadastre.service.test.ts"
+  },
+  "dependencies": {
+    "ethers": "^6.13.4"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}

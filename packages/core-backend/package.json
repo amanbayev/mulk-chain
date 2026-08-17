@@ -1,0 +1,17 @@
+{
+  "name": "@mulk-chain/core-backend",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Periodic batch auction matching and T+0 DvP settlement",
+  "main": "dist/batch-auction.engine.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "tsx --test src/batch-auction.engine.test.ts src/dvp-settlement.orchestrator.test.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}
