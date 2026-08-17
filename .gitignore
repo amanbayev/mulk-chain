@@ -3,7 +3,7 @@ dist/
 cache/
 out/
 broadcast/
-lib/
+/lib/
 .env
 .env.*
 !.env.example
