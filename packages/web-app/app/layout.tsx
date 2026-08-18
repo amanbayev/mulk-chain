@@ -1,10 +1,9 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
-import { cookies } from "next/headers";
 import { IBM_Plex_Mono, IBM_Plex_Sans } from "next/font/google";
 import { NextIntlClientProvider } from "next-intl";
+import { getLocale, getMessages, getTimeZone } from "next-intl/server";
 import { Providers } from "./providers";
-import { DEFAULT_LOCALE, isAppLocale } from "@/lib/i18n/config";
 import "./globals.css";
 
 const sans = IBM_Plex_Sans({
@@ -30,14 +29,14 @@ export const metadata: Metadata = {
 };
 
 export default async function RootLayout({ children }: { children: ReactNode }) {
-  const cookie = cookies().get("NEXT_LOCALE")?.value;
-  const locale = isAppLocale(cookie) ? cookie : DEFAULT_LOCALE;
-  const messages = (await import(`../messages/${locale}.json`)).default;
+  const locale = await getLocale();
+  const messages = await getMessages();
+  const timeZone = await getTimeZone();
 
   return (
     <html lang={locale} suppressHydrationWarning className={`${sans.variable} ${mono.variable}`}>
       <body className="min-h-screen font-sans">
-        <NextIntlClientProvider locale={locale} messages={messages} timeZone="Asia/Almaty">
+        <NextIntlClientProvider locale={locale} messages={messages} timeZone={timeZone}>
           <Providers>{children}</Providers>
         </NextIntlClientProvider>
       </body>
