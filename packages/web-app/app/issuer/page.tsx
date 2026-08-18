@@ -1,7 +1,11 @@
 "use client";
 
+import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
+import { KycApplicationQueue } from "@/components/issuer/kyc-application-queue";
 import { KycRegistryForm } from "@/components/issuer/kyc-registry-form";
+import { SubscriptionQueue } from "@/components/issuer/subscription-queue";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardContent } from "@/components/ui/card";
 import { BAITEREK } from "@/lib/constants";
@@ -41,8 +45,11 @@ export default function IssuerOverviewPage() {
         title="Control room"
         description={`${BAITEREK.name} is the working lot. Register identities on IdentityRegistry, then mint only against EGKN via verifiedMint.`}
       />
+      <Suspense fallback={null}>
+        <IssuerKycPanel />
+      </Suspense>
       <div className="mb-6">
-        <KycRegistryForm />
+        <SubscriptionQueue />
       </div>
       <div className="grid gap-4 md:grid-cols-2">
         {tiles.map((tile) => (
@@ -57,6 +64,23 @@ export default function IssuerOverviewPage() {
           </Link>
         ))}
       </div>
+    </div>
+  );
+}
+
+function IssuerKycPanel() {
+  const params = useSearchParams();
+  const queryWallet = params.get("wallet") ?? "";
+  const [wallet, setWallet] = useState(queryWallet);
+
+  useEffect(() => {
+    if (queryWallet) setWallet(queryWallet);
+  }, [queryWallet]);
+
+  return (
+    <div className="mb-6 grid gap-4 lg:grid-cols-2">
+      <KycApplicationQueue onSelect={setWallet} />
+      <KycRegistryForm initialWallet={wallet} />
     </div>
   );
 }

@@ -17,21 +17,21 @@ export default function HomePage() {
           Institutional market infrastructure for tokenized commercial real estate.
         </h1>
         <p className="mt-4 max-w-xl text-sm leading-relaxed text-muted-foreground">
-          Mülk Chain settles Periodic Batch Auction lots against KZT DvP T+0, with issuance gated by a live EGKN
-          cadastre proof and OnchainID KYC.
+          Demo path: Investor onboarding → Issuer KYC / verifiedMint → ERC-3643 transfer. Issuance is gated by a live
+          EGKN cadastre proof and OnchainID.
         </p>
         <div className="mt-10 grid gap-4 md:grid-cols-2">
           <PortalCard
-            href="/investor"
+            href="/investor/onboarding"
             kicker="Investor"
-            title="Portfolio, auction ticket, rental yield"
-            body="NAV, KYC Green badge, limit orders inside the ±10% collar, and NOI waterfall history."
+            title="Onboarding, KYC, MULK transfer"
+            body="Connect MetaMask, file KYC/KYB, then sell via MulkToken.transfer after the issuer verifies OnchainID."
           />
           <PortalCard
             href="/issuer"
             kicker="Issuer & administrator"
-            title="Listing, verified mint, enforcement"
-            body="Cadastral registration, Gov-Oracle mint console, NOI trigger, and 3-of-5 multi-sig board."
+            title="Verify identity, verifiedMint"
+            body="Pending KYC queue → IdentityRegistry.registerIdentity, then fill primary subscriptions with verifiedMint."
           />
         </div>
       </main>

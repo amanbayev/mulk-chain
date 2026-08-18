@@ -2,10 +2,9 @@
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import type { DividendRegister } from "@/lib/api/types";
-import { DEFAULT_INVESTOR_ID } from "@/lib/constants";
 import { formatKzt } from "@/lib/money";
 
-export function PayoutTable({ distributions, investorId = DEFAULT_INVESTOR_ID }: { distributions: DividendRegister[]; investorId?: string }) {
+export function PayoutTable({ distributions, investorId = "" }: { distributions: DividendRegister[]; investorId?: string }) {
   return (
     <Table>
       <TableHeader>

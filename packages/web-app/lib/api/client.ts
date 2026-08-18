@@ -1,6 +1,7 @@
 import type {
   ApiErrorBody,
   AuctionStatus,
+  CreateSubscriptionBody,
   DividendRegister,
   InitKycBody,
   InvestorProfile,
@@ -8,8 +9,10 @@ import type {
   MintRequestBody,
   PortfolioResponse,
   RegisterAssetBody,
+  RegisterInvestorBody,
   SubmitOrderBody,
   SubmitOrderResponse,
+  SubscriptionRequest,
   TriggerYieldBody,
   YieldHistoryResponse,
 } from "@/lib/api/types";
@@ -56,6 +59,28 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 export const api = {
   initKyc(body: InitKycBody): Promise<InvestorProfile> {
     return request("/api/v1/investor/kyc/init", { method: "POST", body: JSON.stringify(body) });
+  },
+  registerInvestor(body: RegisterInvestorBody): Promise<InvestorProfile> {
+    return request("/api/v1/investor/register", { method: "POST", body: JSON.stringify(body) });
+  },
+  investorProfile(wallet: string): Promise<InvestorProfile> {
+    return request(`/api/v1/investor/profile?wallet=${encodeURIComponent(wallet)}`);
+  },
+  pendingKycApplications(): Promise<InvestorProfile[]> {
+    return request("/api/v1/issuer/kyc/applications");
+  },
+  confirmKyc(wallet: string): Promise<InvestorProfile> {
+    return request("/api/v1/issuer/kyc/confirm", { method: "POST", body: JSON.stringify({ wallet }) });
+  },
+  subscribe(body: CreateSubscriptionBody): Promise<SubscriptionRequest> {
+    return request("/api/v1/investor/subscribe", { method: "POST", body: JSON.stringify(body) });
+  },
+  listSubscriptions(status?: SubscriptionRequest["status"]): Promise<SubscriptionRequest[]> {
+    const query = status ? `?status=${encodeURIComponent(status)}` : "";
+    return request(`/api/v1/issuer/subscriptions${query}`);
+  },
+  fillSubscription(id: string): Promise<SubscriptionRequest> {
+    return request("/api/v1/issuer/subscriptions/fill", { method: "POST", body: JSON.stringify({ id }) });
   },
   portfolio(investorId: string): Promise<PortfolioResponse> {
     return request(`/api/v1/investor/portfolio?investorId=${encodeURIComponent(investorId)}`);

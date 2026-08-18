@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { isAddress, type Address } from "viem";
 import { useAccount, useWaitForTransactionReceipt, useWriteContract } from "wagmi";
 import { TxStatus } from "@/components/chain/tx-status";
+import { markKycConfirmed } from "@/components/issuer/kyc-application-queue";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -14,16 +15,22 @@ import { walletErrorMessage } from "@/lib/chain/errors";
 import { KZ_COUNTRY_CODE } from "@/lib/chain/mint-proof";
 import { identityRegistryAbi } from "@/lib/contracts/abis";
 import { useIsContractAgent, useOnchainInvestor } from "@/hooks/use-onchain-investor";
+import { useQueryClient } from "@tanstack/react-query";
 
-export function KycRegistryForm() {
+export function KycRegistryForm({ initialWallet = "" }: { initialWallet?: string }) {
   const { address, isConnected } = useAccount();
   const { isAgent } = useIsContractAgent("registry");
-  const [target, setTarget] = useState("");
+  const [target, setTarget] = useState(initialWallet);
   const [onchainId, setOnchainId] = useState("");
   const { writeContractAsync, data: hash, isPending, reset } = useWriteContract();
   const wait = useWaitForTransactionReceipt({ hash });
   const preview = useOnchainInvestor(isAddress(target) ? (target as Address) : undefined);
   const refetchPreview = preview.refetch;
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    if (initialWallet) setTarget(initialWallet);
+  }, [initialWallet]);
 
   useEffect(() => {
     if (address) setTarget((current) => current || address);
@@ -35,7 +42,13 @@ export function KycRegistryForm() {
       description: `Block #${wait.data.blockNumber.toString()}`,
     });
     void refetchPreview();
-  }, [wait.isSuccess, wait.data, refetchPreview]);
+    if (isAddress(target)) {
+      void markKycConfirmed(target).then(async () => {
+        await queryClient.invalidateQueries({ queryKey: ["kyc-applications"] });
+        await queryClient.invalidateQueries({ queryKey: ["investor-profile"] });
+      });
+    }
+  }, [wait.isSuccess, wait.data, refetchPreview, target, queryClient]);
 
   async function submit(): Promise<void> {
     if (!isConnected) {

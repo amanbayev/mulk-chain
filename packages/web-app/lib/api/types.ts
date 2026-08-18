@@ -1,5 +1,7 @@
 export type InvestorClass = "RETAIL" | "PROFESSIONAL" | "INSTITUTIONAL" | "ACCREDITED";
 export type KycStatus = "PENDING_KYC" | "VERIFIED" | "REJECTED";
+export type InvestorKind = "INDIVIDUAL" | "LEGAL_ENTITY";
+export type KybStatus = "NOT_REQUIRED" | "KYB_SUBMITTED";
 export type AuctionSide = "BUY" | "SELL";
 export type KycProvider = "SUMSUB" | "EGOV_MOBILE" | "DID";
 export type LedgerTxType = "ORDER" | "DIVIDEND" | "MINT";
@@ -24,6 +26,19 @@ export interface InitKycBody {
   whtBps?: string;
 }
 
+export interface RegisterInvestorBody {
+  wallet: `0x${string}`;
+  displayName: string;
+  email: string;
+  country?: string;
+  investorKind: InvestorKind;
+  investorClass?: InvestorClass;
+  bin?: string;
+  legalName?: string;
+  onchainId?: `0x${string}`;
+  onchainVerified?: boolean;
+}
+
 export interface InvestorProfile {
   investorId: string;
   wallet: string;
@@ -36,6 +51,28 @@ export interface InvestorProfile {
   applicantId: string;
   onboardingUrl: string;
   status: KycStatus;
+  displayName?: string;
+  investorKind?: InvestorKind;
+  investorClass?: InvestorClass;
+  kybStatus?: KybStatus;
+  bin?: string;
+  legalName?: string;
+  submittedAt?: string;
+}
+
+export interface SubscriptionRequest {
+  id: string;
+  wallet: `0x${string}`;
+  assetId: string;
+  amount: string;
+  status: "PENDING" | "FILLED";
+  createdAt: string;
+}
+
+export interface CreateSubscriptionBody {
+  wallet: `0x${string}`;
+  assetId: string;
+  amount: string;
 }
 
 export interface AssetBalance {

@@ -5,8 +5,10 @@ import { useAccount } from "wagmi";
 import { DividendClaimCard } from "@/components/investor/yield-waterfall";
 import { KycBadge } from "@/components/investor/kyc-badge";
 import { MetricCard } from "@/components/investor/metric-card";
+import { OnboardingStepper } from "@/components/investor/onboarding-stepper";
 import { PageHeader } from "@/components/layout/page-header";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useInvestorProfile } from "@/hooks/use-investor-profile";
 import { useOnchainInvestor } from "@/hooks/use-onchain-investor";
 import { BAITEREK } from "@/lib/constants";
 import { CHAIN_ADDRESSES, explorerAddressUrl } from "@/lib/chain/addresses";
@@ -16,6 +18,7 @@ import { shortAddress } from "@/lib/utils";
 export default function InvestorDashboardPage() {
   const { address, isConnected } = useAccount();
   const { balance, isVerified, decimals, isLoading } = useOnchainInvestor();
+  const profileQuery = useInvestorProfile(address);
   const nav = toBigInt(BAITEREK.nav);
   const scale = 10n ** BigInt(decimals);
   const aum = (balance * nav) / scale;
@@ -42,6 +45,13 @@ export default function InvestorDashboardPage() {
           </a>
         </div>
         <KycBadge onchainVerified={isConnected && !isLoading ? isVerified : undefined} connected={isConnected} />
+      </div>
+      <div className="mb-6">
+        <OnboardingStepper
+          connected={isConnected}
+          hasProfile={Boolean(profileQuery.data)}
+          onchainVerified={isConnected && isVerified}
+        />
       </div>
       <div className="grid gap-4 md:grid-cols-3">
         <MetricCard
