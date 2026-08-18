@@ -32,15 +32,19 @@ export function MintConsole({
   assetId = BAITEREK.assetId,
   cadastralNumber = EGKN_CADASTRE_NUMBER,
   inspection = BAITEREK.inspection,
+  initialTo = "",
+  initialAmount,
 }: {
   assetId?: string;
   cadastralNumber?: string;
   inspection?: PledgeInspection;
+  initialTo?: string;
+  initialAmount?: string;
 }) {
   const { address, isConnected } = useAccount();
   const { isAgent } = useIsContractAgent("token");
-  const [to, setTo] = useState("");
-  const [amount, setAmount] = useState("1250");
+  const [to, setTo] = useState(initialTo);
+  const [amount, setAmount] = useState(initialAmount ?? "1250");
   const [signing, setSigning] = useState(false);
   const { signTypedDataAsync } = useSignTypedData();
   const { writeContractAsync, data: hash, isPending, reset } = useWriteContract();
@@ -49,6 +53,14 @@ export function MintConsole({
   const recipient = useOnchainInvestor(target);
   const refetchRecipient = recipient.refetch;
   const clear = inspection.status === "CLEAR" && !inspection.pledge && !inspection.arrest && !inspection.revocation;
+
+  useEffect(() => {
+    if (initialTo) setTo(initialTo);
+  }, [initialTo]);
+
+  useEffect(() => {
+    if (initialAmount) setAmount(initialAmount);
+  }, [initialAmount]);
 
   useEffect(() => {
     if (address) setTo((current) => current || address);

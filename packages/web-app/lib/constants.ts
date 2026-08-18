@@ -29,7 +29,9 @@ export const BAITEREK: AssetCatalogEntry = {
   },
 };
 
+/** Seed identity for the in-memory demo-store only — live UI binds to the connected Wagmi address. */
 export const DEFAULT_INVESTOR_ID = process.env.NEXT_PUBLIC_DEFAULT_INVESTOR_ID ?? "inv-001";
+/** Anvil account #1. Not used as the live Sepolia investor default. */
 export const DEFAULT_INVESTOR_WALLET = "0x70997970C51812dc3A010C7d01b50e0d17dc79C8" as const;
 export const DEFAULT_ONCHAIN_ID = "0x3C44cddDb6a900fa2b585dd299e03d12FA4293BC" as const;
 

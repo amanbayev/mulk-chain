@@ -31,6 +31,36 @@ async function handleDemo(request: NextRequest, path: string[]): Promise<NextRes
     if (request.method === "POST" && route === "/investor/kyc/init") {
       return json(demoStore.initKyc(await request.json()), 201);
     }
+    if (request.method === "POST" && route === "/investor/register") {
+      return json(demoStore.registerInvestor(await request.json()), 201);
+    }
+    if (request.method === "GET" && route === "/investor/profile") {
+      const wallet = search.get("wallet");
+      if (!wallet) return json({ code: "MISSING_WALLET", message: "wallet query is required" }, 400);
+      const profile = demoStore.profileByWallet(wallet);
+      if (!profile) return json({ code: "INVESTOR_NOT_FOUND", message: `unknown wallet ${wallet}` }, 404);
+      return json(profile);
+    }
+    if (request.method === "GET" && route === "/issuer/kyc/applications") {
+      return json(demoStore.pendingKycApplications());
+    }
+    if (request.method === "POST" && route === "/issuer/kyc/confirm") {
+      const body = (await request.json()) as { wallet?: string };
+      if (!body.wallet) return json({ code: "MISSING_WALLET", message: "wallet is required" }, 400);
+      return json(demoStore.confirmKyc(body.wallet));
+    }
+    if (request.method === "POST" && route === "/investor/subscribe") {
+      return json(demoStore.createSubscription(await request.json()), 201);
+    }
+    if (request.method === "GET" && route === "/issuer/subscriptions") {
+      const status = search.get("status");
+      return json(demoStore.listSubscriptions(status === "PENDING" || status === "FILLED" ? status : undefined));
+    }
+    if (request.method === "POST" && route === "/issuer/subscriptions/fill") {
+      const body = (await request.json()) as { id?: string };
+      if (!body.id) return json({ code: "MISSING_ID", message: "id is required" }, 400);
+      return json(demoStore.fillSubscription(body.id));
+    }
     if (request.method === "GET" && route === "/investor/portfolio") {
       const investorId = search.get("investorId");
       if (!investorId) return json({ code: "MISSING_INVESTOR", message: "investorId query is required" }, 400);

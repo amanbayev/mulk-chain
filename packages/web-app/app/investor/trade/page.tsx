@@ -2,6 +2,7 @@
 
 import { AuctionEpochCard } from "@/components/investor/auction-epoch";
 import { OrderTicket } from "@/components/investor/order-ticket";
+import { TokenTicket } from "@/components/investor/token-ticket";
 import { MetricCard } from "@/components/investor/metric-card";
 import { PageHeader } from "@/components/layout/page-header";
 import { BAITEREK } from "@/lib/constants";
@@ -17,7 +18,7 @@ export default function TradePage() {
       <PageHeader
         kicker="Secondary market"
         title="Order terminal"
-        description="Limit orders enter the open Periodic Batch Auction window. Prices outside NAV ±10% are rejected and never clear."
+        description="Executable settlement is MulkToken.transfer or issuer verifiedMint. The NAV ±10% book below is indicative only."
       />
       <div className="mb-6">
         <AuctionEpochCard />
@@ -31,6 +32,9 @@ export default function TradePage() {
           value={`${formatQty(auction?.indicativeDemandAtNav ?? "0")} / ${formatQty(auction?.indicativeSupplyAtNav ?? "0")}`}
           hint="Demand / supply"
         />
+      </div>
+      <div className="mb-6">
+        <TokenTicket />
       </div>
       <OrderTicket assetId={BAITEREK.assetId} auction={auction} />
     </div>

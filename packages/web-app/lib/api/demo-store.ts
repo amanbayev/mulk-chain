@@ -4,6 +4,7 @@ import { collarBounds, DEFAULT_COLLAR_BPS, DEFAULT_SPV_RESERVE_BPS, inCollar, to
 import { previewYield, DEMO_HOLDERS } from "@/lib/yield-preview";
 import type {
   AuctionStatus,
+  CreateSubscriptionBody,
   DividendRegister,
   InitKycBody,
   InvestorProfile,
@@ -12,8 +13,10 @@ import type {
   MintRequestBody,
   PortfolioResponse,
   RegisterAssetBody,
+  RegisterInvestorBody,
   SubmitOrderBody,
   SubmitOrderResponse,
+  SubscriptionRequest,
   TriggerYieldBody,
   YieldHistoryResponse,
 } from "@/lib/api/types";
@@ -81,6 +84,7 @@ class DemoStore {
   encumbered = new Set<string>();
   mintLog: MintAuthorization[] = [];
   orders: LimitOrder[] = [];
+  subscriptions: SubscriptionRequest[] = [];
   interval = {
     intervalId: `auc-${BAITEREK.assetId}`,
     assetId: BAITEREK.assetId,
@@ -120,8 +124,16 @@ class DemoStore {
       applicantId: `app-${DEFAULT_INVESTOR_ID}`,
       onboardingUrl: `https://kyc.mulk.chain/session/app-${DEFAULT_INVESTOR_ID}?provider=SUMSUB`,
       status: "VERIFIED",
+      displayName: "AIFC Growth Fund",
+      investorKind: "LEGAL_ENTITY",
+      investorClass: "INSTITUTIONAL",
+      kybStatus: "KYB_SUBMITTED",
+      bin: BAITEREK.spvBin,
+      legalName: "AIFC Growth Fund Ltd.",
+      submittedAt: BAITEREK.createdAt,
     };
     this.profiles.set(profile.investorId, profile);
+    this.profiles.set(profile.wallet.toLowerCase(), profile);
     this.kyc.set(profile.investorId, { kycValid: true, investorClass: "INSTITUTIONAL" });
     this.balances.set(profile.investorId, new Map([[BAITEREK.assetId, 1_250n]]));
 
@@ -183,9 +195,112 @@ class DemoStore {
       applicantId: `app-${body.investorId}`,
       onboardingUrl: `https://kyc.mulk.chain/session/app-${body.investorId}?provider=${body.provider ?? "SUMSUB"}`,
       status: "PENDING_KYC",
+      displayName: body.email ?? body.investorId,
+      investorKind: "INDIVIDUAL",
+      investorClass: "RETAIL",
+      kybStatus: "NOT_REQUIRED",
+      submittedAt: new Date().toISOString(),
     };
-    this.profiles.set(body.investorId, profile);
+    this.storeProfile(profile);
     return profile;
+  }
+
+  registerInvestor(body: RegisterInvestorBody): InvestorProfile {
+    if (!/^0x[0-9a-fA-F]{40}$/.test(body.wallet)) fail(400, "INVALID_WALLET", "wallet must be a 20-byte hex address");
+    const displayName = body.displayName.trim();
+    const email = body.email.trim();
+    if (!displayName || !email) fail(400, "INVALID_PROFILE", "displayName and email are required");
+    if (body.investorKind === "LEGAL_ENTITY") {
+      if (!body.bin?.trim() || !body.legalName?.trim()) {
+        fail(400, "KYB_REQUIRED", "Legal entity KYB requires BIN and legal name");
+      }
+    }
+    const wallet = body.wallet;
+    const investorId = wallet.toLowerCase();
+    const existing = this.findProfile(wallet);
+    const profile: InvestorProfile = {
+      investorId,
+      wallet,
+      onchainId: body.onchainId ?? wallet,
+      iban: existing?.iban ?? `KZ-IBAN-${wallet.slice(2, 10)}`,
+      whtBps: existing?.whtBps ?? "0",
+      email,
+      country: body.country ?? "KZ",
+      provider: "SUMSUB",
+      applicantId: `app-${investorId}`,
+      onboardingUrl: `https://kyc.mulk.chain/session/app-${investorId}?provider=SUMSUB`,
+      status: existing?.status === "VERIFIED" || body.onchainVerified ? "VERIFIED" : "PENDING_KYC",
+      displayName,
+      investorKind: body.investorKind,
+      investorClass: body.investorClass ?? "RETAIL",
+      kybStatus: body.investorKind === "LEGAL_ENTITY" ? "KYB_SUBMITTED" : "NOT_REQUIRED",
+      bin: body.bin?.trim(),
+      legalName: body.legalName?.trim(),
+      submittedAt: new Date().toISOString(),
+    };
+    this.storeProfile(profile);
+    this.kyc.set(investorId, {
+      kycValid: profile.status === "VERIFIED",
+      investorClass: profile.investorClass ?? null,
+    });
+    return profile;
+  }
+
+  profileByWallet(wallet: string): InvestorProfile | null {
+    return this.findProfile(wallet);
+  }
+
+  pendingKycApplications(): InvestorProfile[] {
+    const seen = new Set<string>();
+    const rows: InvestorProfile[] = [];
+    for (const profile of this.profiles.values()) {
+      const key = profile.wallet.toLowerCase();
+      if (seen.has(key) || profile.status !== "PENDING_KYC") continue;
+      seen.add(key);
+      rows.push(profile);
+    }
+    return rows.sort((a, b) => (b.submittedAt ?? "").localeCompare(a.submittedAt ?? ""));
+  }
+
+  confirmKyc(wallet: string): InvestorProfile {
+    const profile = this.findProfile(wallet);
+    if (!profile) fail(404, "INVESTOR_NOT_FOUND", `unknown wallet ${wallet}`);
+    profile.status = "VERIFIED";
+    this.storeProfile(profile);
+    this.kyc.set(profile.investorId, {
+      kycValid: true,
+      investorClass: profile.investorClass ?? this.kyc.get(profile.investorId)?.investorClass ?? null,
+    });
+    return profile;
+  }
+
+  createSubscription(body: CreateSubscriptionBody): SubscriptionRequest {
+    if (!/^0x[0-9a-fA-F]{40}$/.test(body.wallet)) fail(400, "INVALID_WALLET", "wallet must be a 20-byte hex address");
+    if (!this.assets.has(body.assetId)) fail(404, "ASSET_NOT_FOUND", `unknown asset ${body.assetId}`);
+    const amount = body.amount.trim();
+    if (!amount || Number(amount) <= 0) fail(400, "INVALID_AMOUNT", "amount must be positive");
+    const request: SubscriptionRequest = {
+      id: randomUUID(),
+      wallet: body.wallet,
+      assetId: body.assetId,
+      amount,
+      status: "PENDING",
+      createdAt: new Date().toISOString(),
+    };
+    this.subscriptions.push(request);
+    return request;
+  }
+
+  listSubscriptions(status?: SubscriptionRequest["status"]): SubscriptionRequest[] {
+    const rows = status ? this.subscriptions.filter((row) => row.status === status) : this.subscriptions;
+    return [...rows].reverse();
+  }
+
+  fillSubscription(id: string): SubscriptionRequest {
+    const row = this.subscriptions.find((item) => item.id === id);
+    if (!row) fail(404, "SUBSCRIPTION_NOT_FOUND", `unknown subscription ${id}`);
+    row.status = "FILLED";
+    return row;
   }
 
   portfolio(investorId: string): PortfolioResponse {
@@ -214,8 +329,10 @@ class DemoStore {
 
   placeOrder(body: SubmitOrderBody): SubmitOrderResponse {
     const profile = this.requireProfile(body.investorId);
-    const record = this.kyc.get(body.investorId);
-    if (!record?.kycValid) fail(403, "KYC_REQUIRED", "investor must complete KYC before trading");
+    const record = this.kyc.get(profile.investorId) ?? this.kyc.get(profile.wallet.toLowerCase());
+    if (profile.status !== "VERIFIED" && !record?.kycValid) {
+      fail(403, "KYC_REQUIRED", "investor must complete KYC before trading");
+    }
     if (!this.interval.open || this.interval.assetId !== body.assetId) {
       fail(409, "NO_OPEN_AUCTION", `no open auction window for ${body.assetId}`);
     }
@@ -241,8 +358,9 @@ class DemoStore {
   }
 
   yieldHistoryFor(investorId: string): YieldHistoryResponse {
-    this.requireProfile(investorId);
-    return { investorId, distributions: this.yieldHistory.get(investorId) ?? [] };
+    const profile = this.findProfile(investorId);
+    if (!profile) return { investorId, distributions: [] };
+    return { investorId: profile.investorId, distributions: this.yieldHistory.get(profile.investorId) ?? [] };
   }
 
   registerAsset(body: RegisterAssetBody): ListedAsset {
@@ -361,8 +479,22 @@ class DemoStore {
     return this.assets.get(assetId);
   }
 
+  private storeProfile(profile: InvestorProfile): void {
+    this.profiles.set(profile.investorId, profile);
+    this.profiles.set(profile.wallet.toLowerCase(), profile);
+  }
+
+  private findProfile(investorIdOrWallet: string): InvestorProfile | null {
+    const direct = this.profiles.get(investorIdOrWallet) ?? this.profiles.get(investorIdOrWallet.toLowerCase());
+    if (direct) return direct;
+    for (const profile of this.profiles.values()) {
+      if (profile.wallet.toLowerCase() === investorIdOrWallet.toLowerCase()) return profile;
+    }
+    return null;
+  }
+
   private requireProfile(investorId: string): InvestorProfile {
-    const profile = this.profiles.get(investorId);
+    const profile = this.findProfile(investorId);
     if (!profile) fail(404, "INVESTOR_NOT_FOUND", `unknown investor ${investorId}`);
     return profile;
   }
