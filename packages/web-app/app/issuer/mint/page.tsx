@@ -10,7 +10,7 @@ export default function MintPage() {
       <PageHeader
         kicker="Issuance"
         title="Mint console"
-        description={`${BAITEREK.name} is bound to cadastral ${BAITEREK.cadastralNumber}. Verified mint requests an isolated Gov-Oracle signature.`}
+        description={`${BAITEREK.name} is bound to cadastral ${BAITEREK.cadastralNumber}. The mint button signs EIP-712 in MetaMask, then calls verifiedMint on Arbitrum Sepolia.`}
       />
       <MintConsole />
     </div>

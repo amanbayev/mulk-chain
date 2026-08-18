@@ -3,14 +3,17 @@
 import { ChevronDown, Info, Landmark, Loader2, ShieldCheck } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { useAccount, useWaitForTransactionReceipt, useWriteContract } from "wagmi";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CopyButton } from "@/components/ui/copy-button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { InfoTip } from "@/components/ui/info-tip";
-import { claimDividends, readYieldState, type ChainReceiptView } from "@/lib/chain/actions";
-import { explorerTxUrl } from "@/lib/chain/addresses";
+import { readYieldState, type ChainReceiptView } from "@/lib/chain/actions";
+import { CHAIN_ADDRESSES, explorerTxUrl } from "@/lib/chain/addresses";
+import { yieldVaultAbi } from "@/lib/chain/abis";
+import { walletErrorMessage } from "@/lib/chain/errors";
 import { YIELD_WATERFALL_DEMO } from "@/lib/institutional-demo";
 import { BAITEREK_ASSET_ID } from "@/lib/constants";
 import { formatKzt } from "@/lib/money";
@@ -115,9 +118,11 @@ const CLAIM_STORAGE_KEY = "mulk-demo-q3-claimed";
 const WALLET_STORAGE_KEY = "mulk-demo-usdt-wallet";
 
 export function DividendClaimCard() {
+  const { isConnected } = useAccount();
+  const { writeContractAsync, data: hash, isPending } = useWriteContract();
+  const wait = useWaitForTransactionReceipt({ hash });
   const [open, setOpen] = useState(true);
   const [claimOpen, setClaimOpen] = useState(false);
-  const [claiming, setClaiming] = useState(false);
   const [claimed, setClaimed] = useState(false);
   const [claimableUsdt, setClaimableUsdt] = useState(W.proRataUsd);
   const [walletUsdt, setWalletUsdt] = useState(0);
@@ -145,27 +150,47 @@ export function DividendClaimCard() {
   }, []);
 
   async function claim(): Promise<void> {
-    setClaiming(true);
+    if (!isConnected) {
+      toast.error("Connect MetaMask on Arbitrum Sepolia first");
+      return;
+    }
     try {
-      const result = await claimDividends(BAITEREK_ASSET_ID);
-      setClaimed(true);
-      setClaimableUsdt(result.claimableUsdt);
-      setWalletUsdt(result.walletUsdt);
-      setReceipt(result.receipt);
-      sessionStorage.setItem(CLAIM_STORAGE_KEY, "1");
-      sessionStorage.setItem(WALLET_STORAGE_KEY, String(result.walletUsdt));
-      toast.success("Dividends claimed", {
-        description:
-          result.mode === "anvil"
-            ? `+${formatUsd(result.walletUsdt)} USDT · ${shortHash(result.receipt.transactionHash, 6)}`
-            : `+${formatUsd(result.walletUsdt)} USDT · simulated (chain unreachable)`,
+      await writeContractAsync({
+        address: CHAIN_ADDRESSES.YieldVault,
+        abi: yieldVaultAbi,
+        functionName: "claimDividends",
+        args: [BAITEREK_ASSET_ID],
       });
-    } catch {
-      toast.error("Dividend claim failed");
-    } finally {
-      setClaiming(false);
+    } catch (error) {
+      toast.error(walletErrorMessage(error));
     }
   }
+
+  useEffect(() => {
+    if (!wait.isSuccess || !wait.data || !hash) return;
+    void (async () => {
+      const onchain = await readYieldState(BAITEREK_ASSET_ID);
+      const wallet = onchain?.walletUsdt ?? W.proRataUsd;
+      setClaimed(true);
+      setClaimableUsdt(onchain?.claimableUsdt ?? 0);
+      setWalletUsdt(wallet);
+      setReceipt({
+        mode: "anvil",
+        transactionHash: hash,
+        blockNumber: Number(wait.data.blockNumber),
+        blockHash: wait.data.blockHash,
+        gasUsed: wait.data.gasUsed.toString(),
+        from: wait.data.from,
+        to: (wait.data.to ?? CHAIN_ADDRESSES.YieldVault) as `0x${string}`,
+        status: wait.data.status === "success" ? "success" : "reverted",
+      });
+      sessionStorage.setItem(CLAIM_STORAGE_KEY, "1");
+      sessionStorage.setItem(WALLET_STORAGE_KEY, String(wallet));
+      toast.success("Dividends claimed", {
+        description: `Confirmed in block #${wait.data.blockNumber.toString()}`,
+      });
+    })();
+  }, [wait.isSuccess, wait.data, hash]);
 
   return (
     <Card>
@@ -236,7 +261,7 @@ export function DividendClaimCard() {
               <DialogHeader>
                 <DialogTitle>Transaction receipt</DialogTitle>
                 <DialogDescription>
-                  {receipt.mode === "anvil" ? "Arbitrum Sepolia · sepolia.arbiscan.io" : "Simulated receipt (chain unreachable)"}
+                <DialogDescription>Arbitrum Sepolia · sepolia.arbiscan.io</DialogDescription>
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-2 text-xs">
@@ -266,9 +291,9 @@ export function DividendClaimCard() {
                   applicable to your OnchainID class, is withheld after this split.
                 </p>
               </div>
-              <Button type="button" className="w-full" disabled={claiming || claimed} onClick={() => void claim()}>
-                {claiming ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <ShieldCheck className="mr-1.5 h-3.5 w-3.5" />}
-                {claiming ? "Settling…" : "Claim Dividends (ERC-3643 Verified)"}
+              <Button type="button" className="w-full" disabled={isPending || wait.isLoading || claimed} onClick={() => void claim()}>
+                {isPending || wait.isLoading ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <ShieldCheck className="mr-1.5 h-3.5 w-3.5" />}
+                {isPending || wait.isLoading ? "Sending to Arbitrum Sepolia…" : "Claim Dividends (ERC-3643 Verified)"}
               </Button>
             </>
           )}

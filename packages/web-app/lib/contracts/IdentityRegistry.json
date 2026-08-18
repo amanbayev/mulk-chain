@@ -1,0 +1,43 @@
+{
+  "contractName": "IdentityRegistry",
+  "abi": [
+    {
+      "type": "function",
+      "name": "registerIdentity",
+      "stateMutability": "nonpayable",
+      "inputs": [
+        { "name": "investor", "type": "address" },
+        { "name": "onchainID", "type": "address" }
+      ],
+      "outputs": []
+    },
+    {
+      "type": "function",
+      "name": "isVerified",
+      "stateMutability": "view",
+      "inputs": [{ "name": "investor", "type": "address" }],
+      "outputs": [{ "name": "", "type": "bool" }]
+    },
+    {
+      "type": "function",
+      "name": "investorOnchainID",
+      "stateMutability": "view",
+      "inputs": [{ "name": "investor", "type": "address" }],
+      "outputs": [{ "name": "", "type": "address" }]
+    },
+    {
+      "type": "function",
+      "name": "agents",
+      "stateMutability": "view",
+      "inputs": [{ "name": "", "type": "address" }],
+      "outputs": [{ "name": "", "type": "bool" }]
+    },
+    {
+      "type": "function",
+      "name": "owner",
+      "stateMutability": "view",
+      "inputs": [],
+      "outputs": [{ "name": "", "type": "address" }]
+    }
+  ]
+}
