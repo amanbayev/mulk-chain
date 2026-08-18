@@ -10,6 +10,7 @@ import { CopyButton } from "@/components/ui/copy-button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { InfoTip } from "@/components/ui/info-tip";
 import { claimDividends, readYieldState, type ChainReceiptView } from "@/lib/chain/actions";
+import { explorerTxUrl } from "@/lib/chain/addresses";
 import { YIELD_WATERFALL_DEMO } from "@/lib/institutional-demo";
 import { BAITEREK_ASSET_ID } from "@/lib/constants";
 import { formatKzt } from "@/lib/money";
@@ -157,7 +158,7 @@ export function DividendClaimCard() {
         description:
           result.mode === "anvil"
             ? `+${formatUsd(result.walletUsdt)} USDT · ${shortHash(result.receipt.transactionHash, 6)}`
-            : `+${formatUsd(result.walletUsdt)} USDT · simulated (Anvil offline)`,
+            : `+${formatUsd(result.walletUsdt)} USDT · simulated (chain unreachable)`,
       });
     } catch {
       toast.error("Dividend claim failed");
@@ -235,7 +236,7 @@ export function DividendClaimCard() {
               <DialogHeader>
                 <DialogTitle>Transaction receipt</DialogTitle>
                 <DialogDescription>
-                  {receipt.mode === "anvil" ? "Anvil / Foundry JSON-RPC" : "Simulated receipt (Anvil offline)"}
+                  {receipt.mode === "anvil" ? "Arbitrum Sepolia · sepolia.arbiscan.io" : "Simulated receipt (chain unreachable)"}
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-2 text-xs">
@@ -279,13 +280,20 @@ export function DividendClaimCard() {
 
 function ReceiptRow({ label, value, copy }: { label: string; value: string; copy?: boolean }) {
   const truncated = value.startsWith("0x") && value.length > 18 ? shortHash(value, 8) : value;
+  const explorer = label === "Tx hash" ? explorerTxUrl(value) : null;
   return (
     <div className="flex items-start justify-between gap-3 border-b border-border/70 py-2 last:border-0">
       <span className="shrink-0 text-muted-foreground">{label}</span>
       <div className="flex min-w-0 items-center gap-1">
-        <span className="break-all text-right font-mono tabular" title={value}>
-          {truncated}
-        </span>
+        {explorer ? (
+          <a href={explorer} target="_blank" rel="noreferrer" className="break-all text-right font-mono tabular text-cyan-400 hover:underline" title={value}>
+            {truncated}
+          </a>
+        ) : (
+          <span className="break-all text-right font-mono tabular" title={value}>
+            {truncated}
+          </span>
+        )}
         {copy ? <CopyButton value={value} label={label} /> : null}
       </div>
     </div>

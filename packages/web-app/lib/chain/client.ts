@@ -1,15 +1,23 @@
 import { createPublicClient, createWalletClient, http, type Address, type Hex, type JsonRpcAccount } from "viem";
-import { foundry } from "viem/chains";
-import { ANVIL_CHAIN_ID, ANVIL_DEPLOYER, ANVIL_RPC_DIRECT } from "@/lib/chain/addresses";
+import {
+  ANVIL_DEPLOYER,
+  TARGET_CHAIN_ID,
+  getActiveChain,
+} from "@/lib/chain/addresses";
 
 const ZERO_CODE = "0x";
+const RPC_TIMEOUT_MS = TARGET_CHAIN_ID === 421614 ? 12_000 : 4_000;
 
 function browserRpcUrl(): string {
   return "/api/rpc";
 }
 
 function nodeRpcUrl(): string {
-  return process.env.ANVIL_RPC_URL ?? process.env.NEXT_PUBLIC_RPC_URL ?? ANVIL_RPC_DIRECT;
+  return (
+    process.env.ARBITRUM_SEPOLIA_RPC_FALLBACK ??
+    process.env.ANVIL_RPC_URL ??
+    "https://sepolia-rollup.arbitrum.io/rpc"
+  );
 }
 
 export function anvilRpcUrl(): string {
@@ -24,23 +32,23 @@ export const demoAccount: JsonRpcAccount = {
 
 export function getPublicClient() {
   return createPublicClient({
-    chain: foundry,
-    transport: http(anvilRpcUrl(), { timeout: 4_000, retryCount: 0 }),
+    chain: getActiveChain(),
+    transport: http(anvilRpcUrl(), { timeout: RPC_TIMEOUT_MS, retryCount: 1 }),
   });
 }
 
 export function getDemoWalletClient() {
   return createWalletClient({
     account: demoAccount,
-    chain: foundry,
-    transport: http(anvilRpcUrl(), { timeout: 8_000, retryCount: 0 }),
+    chain: getActiveChain(),
+    transport: http(anvilRpcUrl(), { timeout: RPC_TIMEOUT_MS * 2, retryCount: 1 }),
   });
 }
 
 export async function probeAnvil(): Promise<boolean> {
   try {
     const chainId = await getPublicClient().getChainId();
-    return chainId === ANVIL_CHAIN_ID;
+    return chainId === TARGET_CHAIN_ID;
   } catch {
     return false;
   }

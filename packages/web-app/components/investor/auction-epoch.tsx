@@ -70,7 +70,7 @@ export function AuctionEpochCard() {
         description:
           result.mode === "anvil"
             ? `$${AUCTION_DEMO.equilibriumUsd.toFixed(2)} · Alice ${result.aliceBalance.toLocaleString("en-GB")} MULK`
-            : `$${AUCTION_DEMO.equilibriumUsd.toFixed(2)} · simulated (Anvil offline)`,
+            : `$${AUCTION_DEMO.equilibriumUsd.toFixed(2)} · simulated (chain unreachable)`,
       });
     } catch {
       toast.error("Epoch settlement failed");

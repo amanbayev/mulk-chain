@@ -70,7 +70,7 @@ export function DataRoomPanel() {
         description:
           result.mode === "anvil"
             ? `${doc.fileName} · GovOracleBridge.getDocumentHash`
-            : `${doc.fileName} · simulated (Anvil offline)`,
+            : `${doc.fileName} · simulated (chain unreachable)`,
       });
     } catch {
       toast.error("Verification failed", { description: "Could not read the on-chain document hash." });

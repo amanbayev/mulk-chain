@@ -1,11 +1,14 @@
 {
-  "chainId": 31337,
-  "rpcUrl": "http://127.0.0.1:8545",
-  "deployer": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
-  "alice": "0x70997970C51812dc3A010C7d01b50e0d17dc79C8",
-  "GovOracleBridge": "0x0165878A594ca255338adfa4d48449f69242Eb8F",
-  "BatchAuctionEngine": "0xa513E6E4b8f2a923D98304ec87F64353C4D5C853",
-  "YieldVault": "0x2279B7A0a67DB372996a5FaB50D91eAA73d2eBe6",
-  "MulkToken": "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9",
-  "GovOracle": "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512"
+  "chainId": 421614,
+  "rpcUrl": "https://sepolia-rollup.arbitrum.io/rpc",
+  "explorerUrl": "https://sepolia.arbiscan.io",
+  "deployer": "0x2BBaC1c30D0774a813d42e149b9E863390103BF0",
+  "alice": "0x2BBaC1c30D0774a813d42e149b9E863390103BF0",
+  "GovOracleBridge": "0xC8eB01BE3fc1F88d4dBD712be6b387645411C74a",
+  "BatchAuctionEngine": "0x0E300D605EF4689ce36D4C8Ae00eeDb188D4A45F",
+  "YieldVault": "0x907DCba322161DD286B765a09b6C27D44765E1a2",
+  "MulkToken": "0x6e6d979a8cBC79d3cbc641403aD25C6234E97c83",
+  "GovOracle": "0x6d1331fc9Cdb92838D619557A881d0DeE57Db2d6",
+  "IdentityRegistry": "0x0e9104384A82B6AA71BE351d2ECEc7B2C94e4254",
+  "EnforcementController": "0x4ac035249b770E911D48fc30402f06984870Efd1"
 }

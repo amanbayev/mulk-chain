@@ -1,17 +1,17 @@
 "use client";
 
-import { Loader2, Radio, RefreshCw } from "lucide-react";
+import { Loader2, RefreshCw } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CopyButton } from "@/components/ui/copy-button";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { InfoTip } from "@/components/ui/info-tip";
 import { useLoopingCountdown } from "@/hooks/use-countdown";
 import { sleep } from "@/lib/chain/client";
 import { updateCadastreStatus } from "@/lib/chain/actions";
 import { ORACLE_DEMO } from "@/lib/institutional-demo";
+import { explorerTxUrl } from "@/lib/chain/addresses";
 import { formatDurationHms, shortHash } from "@/lib/utils";
 
 interface OraclePayload {
@@ -39,7 +39,6 @@ export function OracleLiveStatus() {
   const [checking, setChecking] = useState(false);
   const [txHash, setTxHash] = useState<`0x${string}`>(ORACLE_DEMO.lastCheckTx);
   const [blockNumber, setBlockNumber] = useState(ORACLE_DEMO.blockNumber);
-  const [explorerOpen, setExplorerOpen] = useState(false);
   const payload = buildPayload(txHash, blockNumber);
 
   async function triggerManual(): Promise<void> {
@@ -52,7 +51,7 @@ export function OracleLiveStatus() {
         description:
           result.mode === "anvil"
             ? `EGKN ${ORACLE_DEMO.encumbranceStatus} · ${shortHash(result.transactionHash, 6)}`
-            : `EGKN ${ORACLE_DEMO.encumbranceStatus} · simulated (Anvil offline)`,
+            : `EGKN ${ORACLE_DEMO.encumbranceStatus} · simulated (chain unreachable)`,
       });
     } catch {
       toast.error("Gov-Bridge verification failed", { description: "Anvil RPC call could not be completed." });
@@ -88,19 +87,20 @@ export function OracleLiveStatus() {
           <div className="min-w-0 rounded-md border border-border/80 bg-card/60 px-3 py-2.5">
             <p className="label-caps">Last check tx hash</p>
             <div className="mt-1 flex items-center gap-1">
-              <InfoTip content="Opens the mock block explorer payload for this Gov-Oracle attestation.">
-                <button
-                  type="button"
+              <InfoTip content="Opens the Arbiscan Sepolia explorer for this Gov-Oracle attestation.">
+                <a
+                  href={explorerTxUrl(txHash)}
+                  target="_blank"
+                  rel="noreferrer"
                   className="truncate font-mono text-sm text-cyan-400 hover:underline"
                   onClick={() => {
-                    setExplorerOpen(true);
-                    toast.message("Explorer payload", {
-                      description: `cadastre_id ${payload.cadastre_id} · ${payload.encumbrance_status}`,
+                    toast.message("Explorer", {
+                      description: `https://sepolia.arbiscan.io · ${payload.encumbrance_status}`,
                     });
                   }}
                 >
                   {shortHash(txHash, 4)}
-                </button>
+                </a>
               </InfoTip>
               <CopyButton value={txHash} label="Tx hash" />
             </div>
@@ -113,42 +113,6 @@ export function OracleLiveStatus() {
           </div>
         </div>
       </div>
-
-      <Dialog open={explorerOpen} onOpenChange={setExplorerOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Radio className="h-4 w-4 text-cyan-400" />
-              Cadastre sync tx
-            </DialogTitle>
-            <DialogDescription>Gov-Oracle attestation included in block {blockNumber.toLocaleString("en-GB")}</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-2">
-            <div className="flex items-center justify-between gap-2 text-xs">
-              <span className="text-muted-foreground">tx</span>
-              <span className="flex items-center gap-1">
-                <span className="break-all font-mono tabular">{shortHash(txHash, 10)}</span>
-                <CopyButton value={txHash} label="Tx hash" />
-              </span>
-            </div>
-            <pre className="max-h-64 overflow-auto rounded-md border border-border bg-muted/40 p-3 font-mono text-[11px] leading-relaxed">
-              {JSON.stringify(
-                {
-                  cadastre_id: payload.cadastre_id,
-                  egkn_canonical: ORACLE_DEMO.cadastreId,
-                  encumbrance_status: payload.encumbrance_status,
-                  block_number: payload.block_number,
-                  inspected_at: payload.inspected_at,
-                  consensus: payload.consensus,
-                  tx_hash: payload.tx_hash,
-                },
-                null,
-                2,
-              )}
-            </pre>
-          </div>
-        </DialogContent>
-      </Dialog>
     </>
   );
 }
