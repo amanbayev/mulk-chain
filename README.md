@@ -12,7 +12,7 @@ Monorepo Architecture · ERC-3643 Permissioned Suite · DvP T+0 Clearing · Smar
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue.svg)](packages/core-backend)
 [![Solidity](https://img.shields.io/badge/Solidity-0.8.24-lightgrey.svg)](packages/contracts)
 [![Next.js](https://img.shields.io/badge/Next.js-14%20App%20Router-black.svg)](packages/web-app)
-[![Sandbox](https://img.shields.io/badge/v1.0.0--PROD-AIFC%20Sandbox-8A2BE2.svg)](#)
+[![Sandbox](https://img.shields.io/badge/v1.1.0--PROD-AIFC%20Sandbox-8A2BE2.svg)](#11-журнал-версий)
 
 Институциональный программный комплекс для токенизации коммерческой доходной недвижимости (**Real World Assets**) в юрисдикции **Международного финансового центра «Астана» (МФЦА / AIFC)**. Ончейн-состояние криптографически синхронизировано с государственным кадастром **ИС ЕГКН** через шину **Smart Bridge** (МИИЦР РК / НАО «Правительство для граждан»).
 
@@ -40,6 +40,7 @@ Monorepo Architecture · ERC-3643 Permissioned Suite · DvP T+0 Clearing · Smar
 8. [Регуляторное соответствие (AIFC / AFSA) и безопасность](#8-регуляторное-соответствие-aifc--afsa-и-безопасность)
 9. [CI/CD пайплайн и регламент Pull Request](#9-cicd-пайплайн-и-регламент-pull-request)
 10. [Лицензирование и контакты](#10-лицензирование-и-контакты)
+11. [Журнал версий](#11-журнал-версий)
 
 ---
 
@@ -69,12 +70,12 @@ Mülk Chain закрывает четыре системных разрыва р
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────┐
-│  1. USER & CLIENT  ·  Next.js 14 App Router / Tailwind / wagmi           │
-│  Investor Portal          Issuer Portal           Governance Board       │
-│  · KYC Green Badge        · Asset registration    · 3-of-5 confirmations │
-│  · GAV / NAV              · EGKN mint console     · forcedTransfer       │
-│  · Limit ticket ±10%      · NOI trigger           · emergency pause      │
-│  · NOI payout history     · Cadastre validation   · recovery / estate    │
+│  1. USER & CLIENT  ·  Next.js 14 / wagmi / next-intl (EN · RU · KK)      │
+│  Investor                 Issuer                  Admin (Compliance)     │
+│  · Onboarding KYC/KYB     · registerIdentity      · Approve / reject     │
+│  · MULK transfer + KYT    · verifiedMint          · Audit trail          │
+│  · NAV ticker ±10%        · Ready-for-OnchainID   · Investor registry    │
+│  · NOI payout history     · 3-of-5 board          · Wallet allowlist     │
 └────────────────────────────────┬─────────────────────────────────────────┘
                                  │ REST / OpenAPI 3 · EIP-712
 ┌────────────────────────────────▼─────────────────────────────────────────┐
@@ -180,17 +181,27 @@ D_{\text{distributable}} = (\text{Gross NOI} - \text{Reserve}_{5\%}) \times (1 -
 
 ### 3.6. Fullstack Web-App Console
 
-Пакет [`packages/web-app`](packages/web-app) — Next.js 14 App Router, Tailwind, shadcn/ui, lucide-react, viem / wagmi. Светлая / тёмная тема.
+Пакет [`packages/web-app`](packages/web-app) — Next.js 14 App Router, Tailwind, shadcn/ui, lucide-react, viem / wagmi v2, next-intl. Светлая / тёмная тема. Интерфейс: **EN** (по умолчанию), **RU**, **KK** (cookie `NEXT_LOCALE`, без префикса в URL).
+
+Живой контур читает и пишет **Arbitrum Sepolia** (chainId `421614`): `balanceOf`, `IdentityRegistry.isVerified`, `registerIdentity`, `verifiedMint` (EIP-712), `MulkToken.transfer`. Предторговый KYT-гейт — ончейн `validateTransfer` + `frozen` + `availableBalance` (не Chainalysis).
+
+Разделение ролей в UI совпадает с операционной моделью AIFC: **Admin** владеет людьми (пакет KYC/KYB), **Issuer** — активом (ончейн `registerIdentity` / `verifiedMint`), **Investor** торгует только после `isVerified`.
 
 | Консоль | Маршрут | Содержание |
 |---|---|---|
-| Investor | `/investor` | GAV, начисленный NOI (KZT), KYC Green Badge / Investor Class |
-| Asset | `/investor/assets/BAITEREK-BC` | NAV, Stabilized NOI Yield 11.2%, адрес, кадастр, инспекция залога ЕГКН |
-| Order terminal | `/investor/trade` | Лимитный Buy/Sell в текущий batch, визуализация коридора NAV ±10% |
+| Landing | `/` | Три портала, Connect, 4 шага демо, лот Baiterek (NAV + EGKN CLEAR) |
+| Investor | `/investor` | Ончейн-баланс MULK, степпер онбординга, KYC badge |
+| Onboarding | `/investor/onboarding` | Анкета физлица / юрлица (BIN + наименование), ключ профиля = адрес MetaMask |
+| Asset | `/investor/assets/BAITEREK-BC` | NAV, Stabilized NOI Yield 11.2%, кадастр, инспекция ЕГКН, data room |
+| Order terminal | `/investor/trade` | Исполняемый ticket: `transfer` / заявка на `verifiedMint`; индикативный стакан NAV ±10% |
 | Payouts | `/investor/payouts` | Gross NOI → 5% SPV reserve → WHT 10% → Net Payout |
-| Issuer | `/issuer` | Регистрация объекта (валидация кадастра), Verified Mint, NOI trigger, 3-of-5 board |
+| Issuer | `/issuer` | Очередь **Ready for OnchainID** (только admin-approved), `registerIdentity`, mint, NOI, 3-of-5 |
+| Mint | `/issuer/mint` | EIP-712 `MintAuthorization` → `verifiedMint`; очередь primary subscription |
+| Admin | `/admin` | Комплаенс: очередь SUBMITTED, досье, Approve / Reject с комментарием, аудит, реестр инвесторов |
 
-Типизированный клиент соответствует OpenAPI шлюза (`/api/v1/investor/*`, `/issuer/*`, `/auction/*`). Без `CORE_BACKEND_URL` BFF отдаёт демо-данные по тому же контракту; при заданном URL проксирует на Hono.
+Профили и заявки: **Neon Postgres**, если задан `DATABASE_URL` (Drizzle, таблицы `portal_investors`, `kyc_applications`, `review_events`, `portal_subscriptions`). Иначе in-memory demo-store (локальный `npm run demo` без Docker). На Vercel serverless память процесса не переживает cold start — для очереди KYC нужен Neon.
+
+Типизированный клиент бьёт в BFF `/api/v1/*`. Без `CORE_BACKEND_URL` BFF обслуживает демо-контур сам; при заданном URL проксирует на Hono (`packages/core-backend`). Мутации Admin требуют `x-admin-wallet` из `ADMIN_WALLETS` или break-glass `x-admin-key`.
 
 ---
 
@@ -222,7 +233,10 @@ mulk-chain/
     │       ├── yield/           # NOI waterfall
     │       ├── identity/        # KYC HMAC, claims, FIFO registry sync
     │       └── api/             # /investor, /issuer, /auction, /docs
-    └── web-app/                 # Next.js 14 investor / issuer consoles
+    └── web-app/                 # Next.js 14 investor / issuer / admin consoles
+        ├── app/admin/           # KYC/KYB workbench
+        ├── lib/db/              # Drizzle + Neon (fallback: in-memory)
+        └── messages/            # EN · RU · KK
 ```
 
 ---
@@ -355,26 +369,38 @@ vercel env add NEXT_PUBLIC_CHAIN_ID production
 | `NEXT_PUBLIC_ENFORCEMENT_CONTROLLER_ADDRESS` | `0x4ac035249b770E911D48fc30402f06984870Efd1` |
 | `NEXT_PUBLIC_EXPLORER_URL` | `https://sepolia.arbiscan.io` |
 | `ARBITRUM_SEPOLIA_RPC_URL` | `https://sepolia-rollup.arbitrum.io/rpc` |
+| `DATABASE_URL` | Neon pooled URL (`sslmode=require`). Пусто = in-memory demo-store |
+| `ADMIN_WALLETS` | Чексум-адреса офицеров комплаенса, через запятую. **Не** ключ эмитента |
+| `ADMIN_API_KEY` | Break-glass для `x-admin-key` (server-only) |
 
-`ARBITRUM_SEPOLIA_RPC_URL` — server-only для `/api/rpc`. Кошелёк без сети 421614 получит `wallet_switchEthereumChain` / `wallet_addEthereumChain`.
+`ARBITRUM_SEPOLIA_RPC_URL` — server-only для `/api/rpc`. Кошелёк без сети 421614 получит `wallet_switchEthereumChain` / `wallet_addEthereumChain`. Без `ADMIN_WALLETS` в production Admin-консоль закрыта; в non-production пустой список пропускает любой подключённый кошелёк (только локальное демо).
 
 ### REST API Gateway
 
 | Метод | Путь |
 |---|---|
 | `POST` | `/api/v1/investor/kyc/init` |
+| `POST` | `/api/v1/investor/register` |
+| `GET` | `/api/v1/investor/profile?wallet=` |
 | `GET` | `/api/v1/investor/portfolio` |
 | `POST` | `/api/v1/investor/orders` |
+| `POST` | `/api/v1/investor/subscribe` |
 | `GET` | `/api/v1/investor/yield/history` |
+| `GET` | `/api/v1/issuer/kyc/applications` (только admin-approved, ещё не on-chain) |
+| `POST` | `/api/v1/issuer/kyc/confirm` |
+| `GET` / `POST` | `/api/v1/issuer/subscriptions` · `/fill` |
 | `POST` | `/api/v1/issuer/assets` |
 | `POST` | `/api/v1/issuer/mint/request` |
 | `POST` | `/api/v1/issuer/yield/trigger` |
+| `GET` | `/api/v1/admin/session` |
+| `GET` | `/api/v1/admin/stats` · `/applications` · `/investors` |
+| `POST` | `/api/v1/admin/applications/decide` (`x-admin-wallet` / `x-admin-key`) |
 | `GET` | `/api/v1/auction/status` |
 | `POST` | `/api/v1/auction/clear` (`x-admin-key`) |
 | `POST` | `/api/v1/webhooks/kyc/:provider` (HMAC-SHA256) |
 | `GET` | `/api/v1/openapi.json` · `/api/v1/docs` |
 
-Ордера принимаются только после GREEN KYC. DTO валидируются Zod.
+Ордера в индикативный стакан принимаются только после GREEN KYC и поданного портального профиля. Исполняемая сделка — ERC-3643 `transfer` / issuer `verifiedMint`. DTO валидируются Zod.
 
 ---
 
@@ -430,3 +456,45 @@ npm run test:e2e
 © 2026 Mülk Chain. AIFC / AFSA Sandbox · ERC-3643 · Smart Bridge ЕГКН.
 
 Не является офертой ценных бумаг. Доступ к консоли — для уполномоченных участников пилота.
+
+---
+
+## 11. Журнал версий
+
+### v1.1.0 — 18 августа 2026
+
+Демо-консоль на Arbitrum Sepolia: три роли, ончейн-оборот MULK, комплаенс-очередь и локализация.
+
+**Контракты и кошелёк**
+
+- Investor / Issuer консоли читают и пишут Sepolia через Wagmi: `balanceOf`, `isVerified`, `registerIdentity`, `verifiedMint` (EIP-712), `MulkToken.transfer`.
+- KYT перед сделкой: `validateTransfer`, `frozen`, `availableBalance`. Неверифицированный transfer блокируется в UI и ревертится ончейн.
+- Публичный RPC / Vercel: workspace `@mulk-chain/web-app`, Root Directory = корень монорепо.
+
+**Инвестор**
+
+- `/investor/onboarding` — Connect → анкета физлица или юрлица (KYB: BIN + наименование). Профиль keyed по checksum-адресу MetaMask, не `inv-001`.
+- Степпер на dashboard: Wallet → Profile → KYC pending → OnchainID → Trade unlocked.
+- `/investor/trade` — исполняемый ticket (продажа = `transfer`, покупка = заявка на primary `verifiedMint`); стакан NAV ±10% помечен как indicative / off-chain.
+
+**Эмитент**
+
+- Очередь **Ready for OnchainID** показывает только пакеты, одобренные Admin.
+- Mint-консоль по-прежнему только `verifiedMint`; Fill из очереди подписок подставляет recipient/amount.
+
+**Admin (новый портал `/admin`)**
+
+- Комплаенс владеет людьми: SUBMITTED → Approve / Reject (отказ с обязательным комментарием) → audit `review_events`.
+- Реестр инвесторов. Гейт: server-only `ADMIN_WALLETS` (не `NEXT_PUBLIC_*`). Ключ эмитента в этот список не входит.
+
+**Данные и UX**
+
+- Neon Postgres (`DATABASE_URL`) для профилей, заявок KYC/KYB и подписок; без URL — in-memory fallback.
+- next-intl: EN (default) · RU · KK, переключатель в шапке.
+- Portal switcher, market ticker (NAV ±10%, Sepolia), расширенное меню кошелька, нижняя навигация на мобильных, landing с тремя порталами и 4 шагами демо.
+
+Вне скоупа этой версии: Sumsub iframe, банковский DvP T+0, клиринг Periodic Batch Auction, изолированный HSM oracle signer.
+
+### v1.0.0 — август 2026
+
+Базовый sandbox: ERC-3643 `MulkToken` + IdentityRegistry + GovOracle + Enforcement 3-of-5, Foundry 19/19, Vitest 15/15, демо-консоли Investor/Issuer, Windows `demo.cmd`, деплой на Arbitrum Sepolia и Vercel.
