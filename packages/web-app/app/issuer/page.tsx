@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { KycRegistryForm } from "@/components/issuer/kyc-registry-form";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardContent } from "@/components/ui/card";
 import { BAITEREK } from "@/lib/constants";
@@ -38,8 +39,11 @@ export default function IssuerOverviewPage() {
       <PageHeader
         kicker="Issuer & administrator"
         title="Control room"
-        description={`${BAITEREK.name} is the working lot. Register additional objects, mint only against EGKN, and collect enforcement signatures here.`}
+        description={`${BAITEREK.name} is the working lot. Register identities on IdentityRegistry, then mint only against EGKN via verifiedMint.`}
       />
+      <div className="mb-6">
+        <KycRegistryForm />
+      </div>
       <div className="grid gap-4 md:grid-cols-2">
         {tiles.map((tile) => (
           <Link key={tile.href} href={tile.href}>

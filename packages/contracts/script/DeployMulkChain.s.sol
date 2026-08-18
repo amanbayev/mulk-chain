@@ -45,17 +45,39 @@ contract DeployMulkChain is Script {
     }
 
     function _load() internal {
-        deployerKey =
-            vm.envOr("ANVIL_PRIVATE_KEY", uint256(0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80));
+        deployerKey = _loadPrivateKey();
         deployer = vm.addr(deployerKey);
-        oracleSigner = vm.envOr("ORACLE_SIGNER", address(0x70997970C51812dc3A010C7d01b50e0d17dc79C8));
-        legal = vm.envOr("ENFORCEMENT_LEGAL", address(0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC));
-        compliance = vm.envOr("ENFORCEMENT_COMPLIANCE", address(0x90F79bf6EB2c4f870365E785982E1f101E93b906));
-        security = vm.envOr("ENFORCEMENT_SECURITY", address(0x15d34AAf54267DB7D7c367839AAf71A00a2C6A65));
-        trustee = vm.envOr("ENFORCEMENT_TRUSTEE", address(0x9965507D1a55bcC2695C58ba16FB37d819B0A4dc));
-        operations = vm.envOr("ENFORCEMENT_OPERATIONS", address(0x976EA74026E726554dB657fA54763abd0C3a0aa9));
-        alice = vm.envOr("DEMO_ALICE", address(0x70997970C51812dc3A010C7d01b50e0d17dc79C8));
+        oracleSigner = _loadAddress("ORACLE_SIGNER_ADDRESS", "ORACLE_SIGNER", deployer);
+        legal = _loadAddress("GOV_MULTISIG_ADMIN_1", "ENFORCEMENT_LEGAL", address(0));
+        compliance = _loadAddress("GOV_MULTISIG_ADMIN_2", "ENFORCEMENT_COMPLIANCE", address(0));
+        security = _loadAddress("GOV_MULTISIG_ADMIN_3", "ENFORCEMENT_SECURITY", address(0));
+        trustee = _loadAddress("GOV_MULTISIG_ADMIN_4", "ENFORCEMENT_TRUSTEE", address(0));
+        operations = _loadAddress("GOV_MULTISIG_ADMIN_5", "ENFORCEMENT_OPERATIONS", address(0));
+        alice = _loadAddress("DEMO_ALICE", "", deployer);
         cadastreHash = keccak256(bytes(CADASTRE_NUMBER));
+        if (oracleSigner == address(0)) revert("DeployMulkChain: missing ORACLE_SIGNER_ADDRESS");
+        if (legal == address(0) || compliance == address(0) || security == address(0)) {
+            revert("DeployMulkChain: set GOV_MULTISIG_ADMIN_1..3");
+        }
+        if (trustee == address(0) || operations == address(0)) {
+            revert("DeployMulkChain: set GOV_MULTISIG_ADMIN_4 and GOV_MULTISIG_ADMIN_5 (3-of-5)");
+        }
+    }
+
+    function _loadPrivateKey() internal view returns (uint256) {
+        if (vm.envExists("PRIVATE_KEY")) return vm.envUint("PRIVATE_KEY");
+        if (vm.envExists("ANVIL_PRIVATE_KEY")) return vm.envUint("ANVIL_PRIVATE_KEY");
+        revert("DeployMulkChain: set PRIVATE_KEY");
+    }
+
+    function _loadAddress(
+        string memory primary,
+        string memory aliasKey,
+        address fallbackValue
+    ) internal view returns (address) {
+        if (vm.envExists(primary)) return vm.envAddress(primary);
+        if (bytes(aliasKey).length != 0 && vm.envExists(aliasKey)) return vm.envAddress(aliasKey);
+        return fallbackValue;
     }
 
     function _broadcast() internal {
@@ -111,9 +133,11 @@ contract DeployMulkChain is Script {
     }
 
     function _writeRootJson() internal {
+        uint256 chainId = block.chainid;
+        string memory network = chainId == 421614 ? "arbitrum-sepolia" : (chainId == 31337 ? "anvil" : "evm");
         string memory root = "root";
-        vm.serializeString(root, "network", "anvil");
-        vm.serializeUint(root, "chainId", 31337);
+        vm.serializeString(root, "network", network);
+        vm.serializeUint(root, "chainId", chainId);
         vm.serializeString(root, "cadastreNumber", CADASTRE_NUMBER);
         vm.serializeString(root, "cadastreHash", vm.toString(cadastreHash));
         _writeRootAddresses(root);

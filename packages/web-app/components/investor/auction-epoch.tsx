@@ -3,12 +3,16 @@
 import { Gavel, Loader2, Shield } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { useAccount, useWaitForTransactionReceipt, useWriteContract } from "wagmi";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { InfoTip } from "@/components/ui/info-tip";
 import { useLoopingCountdown } from "@/hooks/use-countdown";
-import { readEpochState, settleAuctionEpoch } from "@/lib/chain/actions";
+import { readEpochState } from "@/lib/chain/actions";
+import { CHAIN_ADDRESSES } from "@/lib/chain/addresses";
+import { walletErrorMessage } from "@/lib/chain/errors";
+import { batchAuctionEngineAbi } from "@/lib/chain/abis";
 import { AUCTION_DEMO } from "@/lib/institutional-demo";
 import { formatKzt } from "@/lib/money";
 import { formatClock, formatUsd } from "@/lib/utils";
@@ -21,10 +25,12 @@ const SETTLED_KEY = "mulk-demo-epoch-settled";
 
 export function AuctionEpochCard() {
   const { remainingSeconds, ready } = useLoopingCountdown(AUCTION_DEMO.periodSeconds, AUCTION_DEMO.epochOffsetSeconds);
+  const { isConnected } = useAccount();
+  const { writeContractAsync, data: hash, isPending } = useWriteContract();
+  const wait = useWaitForTransactionReceipt({ hash });
   const [settled, setSettled] = useState(false);
   const [settling, setSettling] = useState(false);
   const [aliceBalance, setAliceBalance] = useState(AUCTION_DEMO.aliceStartBalance);
-  const prevRemaining = useRef<number | null>(null);
   const settleLock = useRef(false);
 
   const displayRemaining = settled ? 0 : remainingSeconds;
@@ -59,39 +65,40 @@ export function AuctionEpochCard() {
 
   async function settle(): Promise<void> {
     if (settled || settleLock.current) return;
+    if (!isConnected) {
+      toast.error("Connect MetaMask on Arbitrum Sepolia first");
+      return;
+    }
     settleLock.current = true;
     setSettling(true);
     try {
-      const result = await settleAuctionEpoch(AUCTION_DEMO.epochNumber, AUCTION_DEMO.equilibriumUsd);
-      setSettled(true);
-      setAliceBalance(result.aliceBalance);
-      sessionStorage.setItem(SETTLED_KEY, "1");
-      toast.success("Epoch settled at uniform clearing price", {
-        description:
-          result.mode === "anvil"
-            ? `$${AUCTION_DEMO.equilibriumUsd.toFixed(2)} · Alice ${result.aliceBalance.toLocaleString("en-GB")} MULK`
-            : `$${AUCTION_DEMO.equilibriumUsd.toFixed(2)} · simulated (chain unreachable)`,
+      const equilibriumCents = BigInt(Math.round(AUCTION_DEMO.equilibriumUsd * 100));
+      await writeContractAsync({
+        address: CHAIN_ADDRESSES.BatchAuctionEngine,
+        abi: batchAuctionEngineAbi,
+        functionName: "settleEpoch",
+        args: [BigInt(AUCTION_DEMO.epochNumber), equilibriumCents],
       });
-    } catch {
-      toast.error("Epoch settlement failed");
+    } catch (error) {
+      toast.error(walletErrorMessage(error));
       settleLock.current = false;
-    } finally {
       setSettling(false);
     }
   }
 
   useEffect(() => {
-    if (!ready || settled || settling) return;
-    const prev = prevRemaining.current;
-    prevRemaining.current = remainingSeconds;
-    if (remainingSeconds === 0) {
-      void settle();
-      return;
-    }
-    if (prev != null && prev <= 2 && remainingSeconds > AUCTION_DEMO.periodSeconds - 5) {
-      void settle();
-    }
-  }, [remainingSeconds, ready, settled, settling]);
+    if (!wait.isSuccess || !wait.data) return;
+    void (async () => {
+      const onchain = await readEpochState(AUCTION_DEMO.epochNumber);
+      setSettled(true);
+      setAliceBalance(onchain?.aliceBalance ?? AUCTION_DEMO.aliceStartBalance + AUCTION_DEMO.aliceFillQty);
+      sessionStorage.setItem(SETTLED_KEY, "1");
+      toast.success("Epoch settled at uniform clearing price", {
+        description: `Confirmed in block #${wait.data.blockNumber.toString()}`,
+      });
+      setSettling(false);
+    })();
+  }, [wait.isSuccess, wait.data]);
 
   return (
     <Card className="overflow-hidden">
@@ -159,11 +166,11 @@ export function AuctionEpochCard() {
               type="button"
               variant="outline"
               className="w-full"
-              disabled={settled || settling}
+              disabled={settled || settling || isPending || wait.isLoading}
               onClick={() => void settle()}
             >
               {settling ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Gavel className="mr-1.5 h-3.5 w-3.5" />}
-              {settled ? "Epoch settled" : settling ? "Settling epoch…" : "Force Epoch Settlement (Demo)"}
+              {settled ? "Epoch settled" : settling || isPending || wait.isLoading ? "Settling epoch…" : "Force Epoch Settlement"}
             </Button>
           </div>
         </div>

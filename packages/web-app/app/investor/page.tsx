@@ -1,51 +1,63 @@
 "use client";
 
 import Link from "next/link";
+import { useAccount } from "wagmi";
 import { DividendClaimCard } from "@/components/investor/yield-waterfall";
 import { KycBadge } from "@/components/investor/kyc-badge";
 import { MetricCard } from "@/components/investor/metric-card";
 import { PageHeader } from "@/components/layout/page-header";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useOnchainInvestor } from "@/hooks/use-onchain-investor";
 import { BAITEREK } from "@/lib/constants";
-import { formatKzt, formatQty, toBigInt } from "@/lib/money";
-import { usePortfolio } from "@/hooks/use-platform";
+import { CHAIN_ADDRESSES, explorerAddressUrl } from "@/lib/chain/addresses";
+import { formatKzt, formatTokenUnits, toBigInt } from "@/lib/money";
 import { shortAddress } from "@/lib/utils";
 
 export default function InvestorDashboardPage() {
-  const { data, isLoading, error } = usePortfolio();
-  const baiterekQty = data?.balances.find((row) => row.assetId === BAITEREK.assetId)?.quantity ?? "0";
+  const { address, isConnected } = useAccount();
+  const { balance, isVerified, decimals, isLoading } = useOnchainInvestor();
   const nav = toBigInt(BAITEREK.nav);
-  const aum = toBigInt(baiterekQty) * nav;
+  const scale = 10n ** BigInt(decimals);
+  const aum = (balance * nav) / scale;
 
   return (
     <div>
       <PageHeader
         kicker="Investor"
         title="Portfolio"
-        description="Token balances marked at last NAV, accrued rental income in KZT, and OnchainID verification."
+        description="Live MulkToken balance and IdentityRegistry.isVerified from Arbitrum Sepolia."
       />
-      {error ? <p className="mb-6 text-sm text-destructive">{error.message}</p> : null}
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <p className="text-sm text-muted-foreground">Wallet {data ? shortAddress(data.wallet) : "—"}</p>
+          <p className="text-sm text-muted-foreground">
+            Wallet {isConnected && address ? shortAddress(address) : "not connected"}
+          </p>
+          <a
+            href={explorerAddressUrl(CHAIN_ADDRESSES.MulkToken)}
+            target="_blank"
+            rel="noreferrer"
+            className="text-[11px] text-muted-foreground hover:text-foreground"
+          >
+            MulkToken {shortAddress(CHAIN_ADDRESSES.MulkToken)}
+          </a>
         </div>
-        {data ? <KycBadge kycValid={data.kycValid} status={data.status} investorClass={data.investorClass} /> : null}
+        <KycBadge onchainVerified={isConnected && !isLoading ? isVerified : undefined} connected={isConnected} />
       </div>
       <div className="grid gap-4 md:grid-cols-3">
         <MetricCard
           label="Gross asset value"
-          value={isLoading ? "—" : formatKzt(aum)}
-          hint={`${formatQty(baiterekQty)} tokens · ${BAITEREK.name}`}
+          value={!isConnected || isLoading ? "—" : formatKzt(aum)}
+          hint={`${isConnected ? formatTokenUnits(balance, decimals) : "—"} tokens · ${BAITEREK.name}`}
         />
         <MetricCard
-          label="Accrued rental income"
-          value={isLoading ? "—" : formatKzt(data?.accruedDividendsTiyn ?? "0")}
-          hint="Net of SPV reserve and WHT"
+          label="Token balance"
+          value={!isConnected || isLoading ? "—" : formatTokenUnits(balance, decimals)}
+          hint="MulkToken.balanceOf(connectedAddress)"
         />
         <MetricCard
-          label="Investor class"
-          value={data?.investorClass ?? "—"}
-          hint={data?.kycValid ? "IdentityRegistry.isVerified = true" : "KYC incomplete"}
+          label="OnchainID"
+          value={!isConnected ? "—" : isVerified ? "Verified" : "Unverified"}
+          hint={isVerified ? "IdentityRegistry.isVerified = true" : "IdentityRegistry.isVerified = false"}
         />
       </div>
       <div className="mt-8">
@@ -69,19 +81,21 @@ export default function InvestorDashboardPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {(data?.balances ?? [{ assetId: BAITEREK.assetId, quantity: baiterekQty }]).map((row) => (
-                <TableRow key={row.assetId}>
-                  <TableCell>
-                    <Link href={`/investor/assets/${row.assetId}`} className="font-medium hover:underline">
-                      {row.assetId === BAITEREK.assetId ? BAITEREK.name : row.assetId}
-                    </Link>
-                    <div className="text-xs text-muted-foreground">{row.assetId}</div>
-                  </TableCell>
-                  <TableCell className="text-right tabular">{formatQty(row.quantity)}</TableCell>
-                  <TableCell className="text-right tabular">{formatKzt(BAITEREK.nav)}</TableCell>
-                  <TableCell className="text-right tabular">{formatKzt(toBigInt(row.quantity) * nav)}</TableCell>
-                </TableRow>
-              ))}
+              <TableRow>
+                <TableCell>
+                  <Link href={`/investor/assets/${BAITEREK.assetId}`} className="font-medium hover:underline">
+                    {BAITEREK.name}
+                  </Link>
+                  <div className="text-xs text-muted-foreground">{BAITEREK.assetId}</div>
+                </TableCell>
+                <TableCell className="text-right tabular">
+                  {!isConnected || isLoading ? "—" : formatTokenUnits(balance, decimals)}
+                </TableCell>
+                <TableCell className="text-right tabular">{formatKzt(BAITEREK.nav)}</TableCell>
+                <TableCell className="text-right tabular">
+                  {!isConnected || isLoading ? "—" : formatKzt(aum)}
+                </TableCell>
+              </TableRow>
             </TableBody>
           </Table>
         </div>

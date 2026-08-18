@@ -18,6 +18,13 @@ gas_reports = ["MulkToken", "EnforcementController", "IdentityRegistry", "GovOra
 [profile.default.fuzz]
 runs = 256
 
+[rpc_endpoints]
+arbitrum_sepolia = "${ARBITRUM_SEPOLIA_RPC_URL}"
+
+# Arbiscan V1 (api-sepolia.arbiscan.io) is deprecated. Etherscan API V2 verifies chain 421614.
+[etherscan]
+arbitrum_sepolia = { key = "${ARBISCAN_API_KEY}", url = "https://api.etherscan.io/v2/api" }
+
 [fmt]
 line_length = 120
 tab_width = 4

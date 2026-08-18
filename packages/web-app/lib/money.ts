@@ -59,6 +59,19 @@ export function formatQty(quantity: string | number | bigint): string {
   return toBigInt(quantity).toString().replace(/\B(?=(\d{3})+(?!\d))/g, "\u00a0");
 }
 
+/** Format an ERC-20 amount for display. `value` is the raw on-chain integer. */
+export function formatTokenUnits(value: bigint, decimals = 18, maxFrac = 4): string {
+  const negative = value < 0n;
+  const abs = negative ? -value : value;
+  const base = 10n ** BigInt(decimals);
+  const whole = abs / base;
+  const frac = abs % base;
+  const grouped = whole.toString().replace(/\B(?=(\d{3})+(?!\d))/g, "\u00a0");
+  if (frac === 0n) return `${negative ? "−" : ""}${grouped}`;
+  const fracStr = frac.toString().padStart(decimals, "0").replace(/0+$/, "").slice(0, maxFrac);
+  return `${negative ? "−" : ""}${grouped}.${fracStr}`;
+}
+
 export function formatBps(bps: string | number | bigint): string {
   const value = toBigInt(bps);
   const whole = value / 100n;

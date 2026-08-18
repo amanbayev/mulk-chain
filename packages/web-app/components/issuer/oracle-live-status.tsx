@@ -1,17 +1,19 @@
 "use client";
 
 import { Loader2, RefreshCw } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { keccak256, stringToHex } from "viem";
+import { useAccount, useWaitForTransactionReceipt, useWriteContract } from "wagmi";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CopyButton } from "@/components/ui/copy-button";
 import { InfoTip } from "@/components/ui/info-tip";
 import { useLoopingCountdown } from "@/hooks/use-countdown";
-import { sleep } from "@/lib/chain/client";
-import { updateCadastreStatus } from "@/lib/chain/actions";
+import { govOracleBridgeAbi } from "@/lib/chain/abis";
+import { CHAIN_ADDRESSES, explorerTxUrl } from "@/lib/chain/addresses";
+import { walletErrorMessage } from "@/lib/chain/errors";
 import { ORACLE_DEMO } from "@/lib/institutional-demo";
-import { explorerTxUrl } from "@/lib/chain/addresses";
 import { formatDurationHms, shortHash } from "@/lib/utils";
 
 interface OraclePayload {
@@ -36,29 +38,38 @@ function buildPayload(txHash: `0x${string}`, blockNumber: number): OraclePayload
 
 export function OracleLiveStatus() {
   const { remainingSeconds, ready } = useLoopingCountdown(ORACLE_DEMO.pollPeriodSeconds, ORACLE_DEMO.pollOffsetSeconds);
-  const [checking, setChecking] = useState(false);
+  const { isConnected } = useAccount();
+  const { writeContractAsync, data: hash, isPending } = useWriteContract();
+  const wait = useWaitForTransactionReceipt({ hash });
   const [txHash, setTxHash] = useState<`0x${string}`>(ORACLE_DEMO.lastCheckTx);
   const [blockNumber, setBlockNumber] = useState(ORACLE_DEMO.blockNumber);
   const payload = buildPayload(txHash, blockNumber);
 
   async function triggerManual(): Promise<void> {
-    setChecking(true);
+    if (!isConnected) {
+      toast.error("Connect MetaMask on Arbitrum Sepolia first");
+      return;
+    }
     try {
-      const [, result] = await Promise.all([sleep(1_200), updateCadastreStatus(ORACLE_DEMO.cadastreAlias)]);
-      setBlockNumber(result.blockNumber);
-      setTxHash(result.transactionHash);
-      toast.success("Gov-Bridge verification complete", {
-        description:
-          result.mode === "anvil"
-            ? `EGKN ${ORACLE_DEMO.encumbranceStatus} · ${shortHash(result.transactionHash, 6)}`
-            : `EGKN ${ORACLE_DEMO.encumbranceStatus} · simulated (chain unreachable)`,
+      await writeContractAsync({
+        address: CHAIN_ADDRESSES.GovOracleBridge,
+        abi: govOracleBridgeAbi,
+        functionName: "updateCadastreStatus",
+        args: [ORACLE_DEMO.cadastreAlias, 1, keccak256(stringToHex(ORACLE_DEMO.cadastreAlias))],
       });
-    } catch {
-      toast.error("Gov-Bridge verification failed", { description: "Anvil RPC call could not be completed." });
-    } finally {
-      setChecking(false);
+    } catch (error) {
+      toast.error(walletErrorMessage(error));
     }
   }
+
+  useEffect(() => {
+    if (!wait.isSuccess || !wait.data || !hash) return;
+    setBlockNumber(Number(wait.data.blockNumber));
+    setTxHash(hash);
+    toast.success("Gov-Bridge verification complete", {
+      description: `Confirmed in block #${wait.data.blockNumber.toString()}`,
+    });
+  }, [wait.isSuccess, wait.data, hash]);
 
   return (
     <>
@@ -106,9 +117,9 @@ export function OracleLiveStatus() {
             </div>
           </div>
           <div className="flex min-w-0 items-end sm:col-span-2 lg:col-span-1">
-            <Button type="button" variant="outline" className="w-full" disabled={checking} onClick={() => void triggerManual()}>
-              {checking ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="mr-1.5 h-3.5 w-3.5" />}
-              {checking ? "Querying EGKN…" : "Trigger Manual Gov-Bridge Verification"}
+            <Button type="button" variant="outline" className="w-full" disabled={isPending || wait.isLoading} onClick={() => void triggerManual()}>
+              {isPending || wait.isLoading ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="mr-1.5 h-3.5 w-3.5" />}
+              {isPending || wait.isLoading ? "Sending to Arbitrum Sepolia…" : "Trigger Manual Gov-Bridge Verification"}
             </Button>
           </div>
         </div>

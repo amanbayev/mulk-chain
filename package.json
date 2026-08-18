@@ -27,7 +27,7 @@
     "infra:up": "docker compose up -d postgres redis",
     "anvil": "anvil --host 127.0.0.1 --port 8545 --chain-id 31337",
     "deploy:local": "node scripts/deploy-local.mjs",
-    "demo": "powershell -ExecutionPolicy Bypass -File ./start-demo.ps1",
+    "demo": "cmd /c powershell -NoProfile -ExecutionPolicy Bypass -File ./start-demo.ps1",
     "lint:fmt": "forge fmt --check"
   },
   "engines": {
