@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { usePendingKycApplications } from "@/hooks/use-investor-profile";
@@ -13,17 +14,18 @@ export function KycApplicationQueue({ onSelect }: { onSelect?: (wallet: string) 
   const { data, isLoading } = usePendingKycApplications();
   const queryClient = useQueryClient();
   const rows = data ?? [];
+  const t = useTranslations("issuer");
 
   return (
     <Card>
       <CardHeader>
-        <p className="label-caps">Pending KYC applications</p>
-        <CardTitle className="text-base">Off-chain packages awaiting registerIdentity</CardTitle>
+        <p className="label-caps">{t("readyTitle")}</p>
+        <CardTitle className="text-base">{t("readyHint")}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
         {isLoading ? <p className="text-sm text-muted-foreground">Loading…</p> : null}
         {!isLoading && rows.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No pending investor packages.</p>
+          <p className="text-sm text-muted-foreground">{t("readyEmpty")}</p>
         ) : null}
         {rows.map((row) => (
           <div key={row.wallet} className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border px-3 py-2">

@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { AuctionEpochCard } from "@/components/investor/auction-epoch";
 import { OrderTicket } from "@/components/investor/order-ticket";
 import { TokenTicket } from "@/components/investor/token-ticket";
@@ -10,16 +11,13 @@ import { formatKzt, formatQty, toBigInt } from "@/lib/money";
 import { useAuction } from "@/hooks/use-platform";
 
 export default function TradePage() {
+  const t = useTranslations("trade");
   const { data: auction } = useAuction(BAITEREK.assetId);
   const nav = auction ? toBigInt(auction.nav) : toBigInt(BAITEREK.nav);
 
   return (
     <div>
-      <PageHeader
-        kicker="Secondary market"
-        title="Order terminal"
-        description="Executable settlement is MulkToken.transfer or issuer verifiedMint. The NAV ±10% book below is indicative only."
-      />
+      <PageHeader kicker={t("kicker")} title={t("title")} description={t("description")} />
       <div className="mb-6">
         <AuctionEpochCard />
       </div>
@@ -33,10 +31,10 @@ export default function TradePage() {
           hint="Demand / supply"
         />
       </div>
-      <div className="mb-6">
+      <div className="grid gap-6 lg:grid-cols-2">
         <TokenTicket />
+        <OrderTicket assetId={BAITEREK.assetId} auction={auction} />
       </div>
-      <OrderTicket assetId={BAITEREK.assetId} auction={auction} />
     </div>
   );
 }

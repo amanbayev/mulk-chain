@@ -2,6 +2,8 @@ export type InvestorClass = "RETAIL" | "PROFESSIONAL" | "INSTITUTIONAL" | "ACCRE
 export type KycStatus = "PENDING_KYC" | "VERIFIED" | "REJECTED";
 export type InvestorKind = "INDIVIDUAL" | "LEGAL_ENTITY";
 export type KybStatus = "NOT_REQUIRED" | "KYB_SUBMITTED";
+export type ApplicationReviewStatus = "SUBMITTED" | "APPROVED" | "REJECTED";
+export type ReviewAction = "SUBMITTED" | "APPROVED" | "REJECTED";
 export type AuctionSide = "BUY" | "SELL";
 export type KycProvider = "SUMSUB" | "EGOV_MOBILE" | "DID";
 export type LedgerTxType = "ORDER" | "DIVIDEND" | "MINT";
@@ -58,6 +60,47 @@ export interface InvestorProfile {
   bin?: string;
   legalName?: string;
   submittedAt?: string;
+  reviewStatus?: ApplicationReviewStatus;
+  applicationId?: string;
+  reviewNotes?: string;
+  reviewedAt?: string;
+  reviewerWallet?: string;
+  onchainConfirmed?: boolean;
+}
+
+export interface ReviewEvent {
+  id: string;
+  applicationId: string;
+  action: ReviewAction;
+  reviewerWallet?: string;
+  notes?: string;
+  createdAt: string;
+}
+
+export interface KycApplication {
+  id: string;
+  wallet: string;
+  reviewStatus: ApplicationReviewStatus;
+  notes?: string;
+  reviewerWallet?: string;
+  reviewedAt?: string;
+  createdAt: string;
+  profile: InvestorProfile;
+  events: ReviewEvent[];
+}
+
+export interface DecideApplicationBody {
+  id: string;
+  action: "APPROVED" | "REJECTED";
+  notes?: string;
+  reviewerWallet: `0x${string}`;
+}
+
+export interface AdminStats {
+  submitted: number;
+  approved: number;
+  rejected: number;
+  investors: number;
 }
 
 export interface SubscriptionRequest {

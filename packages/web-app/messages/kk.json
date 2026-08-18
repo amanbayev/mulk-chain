@@ -1,0 +1,112 @@
+{
+  "brand": {
+    "restricted": "Шектеулі қолжетімділік. Бағалы қағаздар ұсынысы емес. АХҚО юрисдикциясы."
+  },
+  "nav": {
+    "investor": "Инвестор",
+    "issuer": "Эмитент",
+    "admin": "Әкімші",
+    "dashboard": "Портфель",
+    "onboarding": "Онбординг",
+    "asset": "Бәйтерек БО",
+    "trade": "Терминал",
+    "payouts": "Төлемдер",
+    "overview": "Шолу",
+    "registerAsset": "Активті тіркеу",
+    "mint": "Mint консолі",
+    "yield": "Табыс триггері",
+    "enforcement": "Мәжбүрлеу",
+    "queue": "Өтінімдер",
+    "investors": "Инвесторлар",
+    "console": "{portal} консолі"
+  },
+  "shell": {
+    "connect": "Қосу",
+    "disconnect": "Ажырату",
+    "copyAddress": "Мекенжайды көшіру",
+    "viewExplorer": "Эксплорерде ашу",
+    "network": "Arbitrum Sepolia",
+    "navAria": "Негізгі навигация",
+    "more": "Тағы",
+    "language": "Тіл"
+  },
+  "ticker": {
+    "nav": "NAV",
+    "collar": "Дәліз",
+    "lot": "Бәйтерек БО",
+    "chain": "Sepolia"
+  },
+  "kyc": {
+    "connect": "Әмиянды қосыңыз",
+    "checking": "Желідегі KYC тексерілуде…",
+    "verified": "KYC расталды (OnchainID)",
+    "required": "KYC қажет / расталмаған",
+    "pending": "KYC қаралуда",
+    "rejected": "KYC қабылданбады",
+    "green": "KYC Green"
+  },
+  "home": {
+    "kicker": "АХҚО · ЕГКН · ERC-3643",
+    "title": "Токенделген коммерциялық жылжымайтын мүлік нарығының инфрақұрылымы.",
+    "body": "KYC/KYB пакетін тапсырыңыз, комплаенс шешімін күтіңіз, содан кейін эмитент OnchainID тіркейді және ЕГКН дәлелімен MULK минтейді.",
+    "connectCta": "Әмиянды қосу",
+    "step1": "Инвестор пакет тапсырады",
+    "step2": "Әкімші KYC/KYB мақұлдайды",
+    "step3": "Эмитент registerIdentity",
+    "step4": "Transfer немесе verifiedMint",
+    "investorTitle": "Онбординг, KYC, MULK айналымы",
+    "investorBody": "MetaMask қосыңыз, KYC/KYB тапсырыңыз, OnchainID-дан кейін MulkToken.transfer арқылы сатыңыз.",
+    "issuerTitle": "Verified mint және OnchainID",
+    "issuerBody": "Тек әкімші мақұлдаған әмияндарды тіркеңіз, содан кейін verifiedMint-пен өтінімдерді жабыңыз.",
+    "adminTitle": "Комплаенс консолі",
+    "adminBody": "KYC/KYB істерін қарау, мақұлдау немесе қабылдамау, аудит журналы. Әкімші registerIdentity шақырмайды.",
+    "liveLot": "Жұмыс лоты",
+    "egkn": "ЕГКН"
+  },
+  "admin": {
+    "gateTitle": "Комплаенс консолі",
+    "gateBody": "Инвестор пакеттерін қарау үшін allowlist-тегі офицер әмиянын қосыңыз.",
+    "forbidden": "Бұл әмиян әкімші тізімінде жоқ.",
+    "statsSubmitted": "Тапсырылған",
+    "statsApproved": "Мақұлданған",
+    "statsRejected": "Қабылданбаған",
+    "statsInvestors": "Инвесторлар",
+    "queueTitle": "KYC / KYB кезегі",
+    "queueHint": "Офчейн пакеттер. Эмитент тек мақұлданған әмияндарды көреді.",
+    "investorsTitle": "Инвесторлар тізілімі",
+    "dossier": "Іс",
+    "approve": "Мақұлдау",
+    "reject": "Қабылдамау",
+    "notes": "Ескертпе",
+    "notesRequired": "Қабылдамау үшін ескертпе міндетті.",
+    "kindKyc": "Жеке тұлға KYC",
+    "kindKyb": "Заңды тұлға KYB",
+    "empty": "Бұл сүзгіде өтінім жоқ.",
+    "audit": "Аудит",
+    "onchain": "On-chain isVerified",
+    "filterAll": "Барлығы",
+    "open": "Ашу"
+  },
+  "issuer": {
+    "readyTitle": "OnchainID-ға дайын",
+    "readyHint": "Әкімші мақұлдаған пакеттер IdentityRegistry.registerIdentity күтуде.",
+    "readyEmpty": "Ончейн KYC күтетін мақұлданған әмиян жоқ."
+  },
+  "trade": {
+    "kicker": "Қосалқы нарық",
+    "title": "Өтінім терминалы",
+    "description": "Орындау — MulkToken.transfer немесе эмитенттің verifiedMint. NAV ±10% стакан тек индикативті."
+  },
+  "onboarding": {
+    "kicker": "Онбординг",
+    "title": "Әмиянды тіркеу",
+    "description": "MetaMask қосыңыз, KYC/KYB пакетін тапсырыңыз, комплаенс пен registerIdentity-ді күтіңіз."
+  },
+  "empty": {
+    "generic": "Әзірге ештеңе жоқ."
+  },
+  "error": {
+    "title": "Бірдеңе бұзылды",
+    "retry": "Қайталау"
+  }
+}

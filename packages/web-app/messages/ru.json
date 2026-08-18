@@ -1,0 +1,112 @@
+{
+  "brand": {
+    "restricted": "Ограниченный доступ. Не является предложением ценных бумаг. Юрисдикция МФЦА."
+  },
+  "nav": {
+    "investor": "Инвестор",
+    "issuer": "Эмитент",
+    "admin": "Админ",
+    "dashboard": "Портфель",
+    "onboarding": "Онбординг",
+    "asset": "Байтерек БЦ",
+    "trade": "Терминал",
+    "payouts": "Выплаты",
+    "overview": "Обзор",
+    "registerAsset": "Регистрация актива",
+    "mint": "Консоль минта",
+    "yield": "Триггер дохода",
+    "enforcement": "Принуждение",
+    "queue": "Заявки",
+    "investors": "Инвесторы",
+    "console": "Консоль: {portal}"
+  },
+  "shell": {
+    "connect": "Подключить",
+    "disconnect": "Отключить",
+    "copyAddress": "Копировать адрес",
+    "viewExplorer": "Открыть в эксплорере",
+    "network": "Arbitrum Sepolia",
+    "navAria": "Основная навигация",
+    "more": "Ещё",
+    "language": "Язык"
+  },
+  "ticker": {
+    "nav": "NAV",
+    "collar": "Коридор",
+    "lot": "Байтерек БЦ",
+    "chain": "Sepolia"
+  },
+  "kyc": {
+    "connect": "Подключите кошелёк",
+    "checking": "Проверка KYC в сети…",
+    "verified": "KYC подтверждён (OnchainID)",
+    "required": "Нужен KYC / не верифицирован",
+    "pending": "KYC на рассмотрении",
+    "rejected": "KYC отклонён",
+    "green": "KYC Green"
+  },
+  "home": {
+    "kicker": "МФЦА · ЕГКН · ERC-3643",
+    "title": "Инфраструктура рынка токенизированной коммерческой недвижимости.",
+    "body": "Подайте пакет KYC/KYB, дождитесь решения комплаенса, затем эмитент регистрирует OnchainID и минтит MULK по живому доказательству ЕГКН.",
+    "connectCta": "Подключить кошелёк",
+    "step1": "Инвестор подаёт пакет",
+    "step2": "Админ одобряет KYC/KYB",
+    "step3": "Эмитент registerIdentity",
+    "step4": "Transfer или verifiedMint",
+    "investorTitle": "Онбординг, KYC, оборот MULK",
+    "investorBody": "Подключите MetaMask, подайте KYC/KYB, затем продавайте через MulkToken.transfer после OnchainID.",
+    "issuerTitle": "Verified mint и OnchainID",
+    "issuerBody": "Регистрируйте только одобренные админом кошельки, затем закрывайте заявки через verifiedMint.",
+    "adminTitle": "Комплаенс-консоль",
+    "adminBody": "Разбор досье KYC/KYB, одобрение или отказ с аудитом. Админ не вызывает registerIdentity.",
+    "liveLot": "Рабочий лот",
+    "egkn": "ЕГКН"
+  },
+  "admin": {
+    "gateTitle": "Консоль комплаенса",
+    "gateBody": "Подключите кошелёк офицера из allowlist, чтобы рассматривать пакеты инвесторов.",
+    "forbidden": "Этот кошелёк не в списке администраторов.",
+    "statsSubmitted": "Подано",
+    "statsApproved": "Одобрено",
+    "statsRejected": "Отклонено",
+    "statsInvestors": "Инвесторы",
+    "queueTitle": "Очередь KYC / KYB",
+    "queueHint": "Офчейн-пакеты. Эмитент видит только одобренные кошельки.",
+    "investorsTitle": "Реестр инвесторов",
+    "dossier": "Досье",
+    "approve": "Одобрить",
+    "reject": "Отклонить",
+    "notes": "Комментарий",
+    "notesRequired": "Для отказа нужен комментарий.",
+    "kindKyc": "Физлицо KYC",
+    "kindKyb": "Юрлицо KYB",
+    "empty": "В этом фильтре заявок нет.",
+    "audit": "Аудит",
+    "onchain": "On-chain isVerified",
+    "filterAll": "Все",
+    "open": "Открыть"
+  },
+  "issuer": {
+    "readyTitle": "Готово к OnchainID",
+    "readyHint": "Одобренные админом пакеты ждут IdentityRegistry.registerIdentity.",
+    "readyEmpty": "Нет одобренных кошельков, ждущих ончейн-KYC."
+  },
+  "trade": {
+    "kicker": "Вторичный рынок",
+    "title": "Терминал заявок",
+    "description": "Исполнение — MulkToken.transfer или verifiedMint эмитента. Стакан NAV ±10% только индикативный."
+  },
+  "onboarding": {
+    "kicker": "Онбординг",
+    "title": "Регистрация кошелька",
+    "description": "Подключите MetaMask, подайте пакет KYC/KYB и дождитесь одобрения комплаенса и registerIdentity."
+  },
+  "empty": {
+    "generic": "Пока ничего нет."
+  },
+  "error": {
+    "title": "Что-то сломалось",
+    "retry": "Повторить"
+  }
+}

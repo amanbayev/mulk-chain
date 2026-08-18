@@ -1,10 +1,14 @@
 import type {
+  AdminStats,
   ApiErrorBody,
+  ApplicationReviewStatus,
   AuctionStatus,
   CreateSubscriptionBody,
+  DecideApplicationBody,
   DividendRegister,
   InitKycBody,
   InvestorProfile,
+  KycApplication,
   MintAuthorization,
   MintRequestBody,
   PortfolioResponse,
@@ -32,6 +36,14 @@ export class MulkApiError extends Error {
 function apiBase(): string {
   const base = process.env.NEXT_PUBLIC_API_BASE_URL;
   return base && base.length > 0 ? base.replace(/\/$/, "") : "";
+}
+
+function adminHeaders(wallet?: string): HeadersInit {
+  const headers: Record<string, string> = {};
+  if (wallet) headers["x-admin-wallet"] = wallet;
+  const key = process.env.NEXT_PUBLIC_ADMIN_API_KEY;
+  if (key) headers["x-admin-key"] = key;
+  return headers;
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
@@ -81,6 +93,31 @@ export const api = {
   },
   fillSubscription(id: string): Promise<SubscriptionRequest> {
     return request("/api/v1/issuer/subscriptions/fill", { method: "POST", body: JSON.stringify({ id }) });
+  },
+  adminSession(wallet?: string): Promise<{ authorized: boolean }> {
+    return request(`/api/v1/admin/session?wallet=${encodeURIComponent(wallet ?? "")}`, {
+      headers: adminHeaders(wallet),
+    });
+  },
+  adminStats(wallet?: string): Promise<AdminStats> {
+    return request("/api/v1/admin/stats", { headers: adminHeaders(wallet) });
+  },
+  adminApplications(wallet?: string, status?: ApplicationReviewStatus): Promise<KycApplication[]> {
+    const query = status ? `?status=${encodeURIComponent(status)}` : "";
+    return request(`/api/v1/admin/applications${query}`, { headers: adminHeaders(wallet) });
+  },
+  adminApplication(id: string, wallet?: string): Promise<KycApplication> {
+    return request(`/api/v1/admin/applications/${id}`, { headers: adminHeaders(wallet) });
+  },
+  adminInvestors(wallet?: string): Promise<InvestorProfile[]> {
+    return request("/api/v1/admin/investors", { headers: adminHeaders(wallet) });
+  },
+  decideApplication(body: DecideApplicationBody): Promise<KycApplication> {
+    return request("/api/v1/admin/applications/decide", {
+      method: "POST",
+      headers: adminHeaders(body.reviewerWallet),
+      body: JSON.stringify(body),
+    });
   },
   portfolio(investorId: string): Promise<PortfolioResponse> {
     return request(`/api/v1/investor/portfolio?investorId=${encodeURIComponent(investorId)}`);

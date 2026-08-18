@@ -4,6 +4,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useAccount } from "wagmi";
+import { useTranslations } from "next-intl";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,6 +21,7 @@ import { KZ_COUNTRY_CODE } from "@/lib/chain/mint-proof";
 import { shortAddress } from "@/lib/utils";
 
 export default function InvestorOnboardingPage() {
+  const t = useTranslations("onboarding");
   const { address, isConnected } = useAccount();
   const { isVerified, isLoading: kycLoading } = useOnchainInvestor();
   const profileQuery = useInvestorProfile(address);
@@ -68,6 +70,8 @@ export default function InvestorOnboardingPage() {
       });
       await queryClient.invalidateQueries({ queryKey: ["investor-profile"] });
       await queryClient.invalidateQueries({ queryKey: ["kyc-applications"] });
+      await queryClient.invalidateQueries({ queryKey: ["admin-applications"] });
+      await queryClient.invalidateQueries({ queryKey: ["admin-stats"] });
     },
     onError: (error) => {
       toast.error(error instanceof MulkApiError || error instanceof Error ? error.message : "Registration failed");
@@ -76,11 +80,7 @@ export default function InvestorOnboardingPage() {
 
   return (
     <div>
-      <PageHeader
-        kicker="Onboarding"
-        title="Register wallet"
-        description="Connect MetaMask, file the KYC/KYB package, then wait for the issuer agent to call IdentityRegistry.registerIdentity."
-      />
+      <PageHeader kicker={t("kicker")} title={t("title")} description={t("description")} />
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-muted-foreground">
           {isConnected && address ? `Wallet ${shortAddress(address)}` : "Wallet not connected"}

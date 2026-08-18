@@ -1,0 +1,112 @@
+{
+  "brand": {
+    "restricted": "Restricted access. Not an offer of securities. AIFC jurisdiction."
+  },
+  "nav": {
+    "investor": "Investor",
+    "issuer": "Issuer",
+    "admin": "Admin",
+    "dashboard": "Dashboard",
+    "onboarding": "Onboarding",
+    "asset": "Baiterek BC",
+    "trade": "Order terminal",
+    "payouts": "Payout history",
+    "overview": "Overview",
+    "registerAsset": "Register asset",
+    "mint": "Mint console",
+    "yield": "Yield trigger",
+    "enforcement": "Enforcement",
+    "queue": "Applications",
+    "investors": "Investors",
+    "console": "{portal} console"
+  },
+  "shell": {
+    "connect": "Connect",
+    "disconnect": "Disconnect",
+    "copyAddress": "Copy address",
+    "viewExplorer": "View on explorer",
+    "network": "Arbitrum Sepolia",
+    "navAria": "Primary",
+    "more": "More",
+    "language": "Language"
+  },
+  "ticker": {
+    "nav": "NAV",
+    "collar": "Collar",
+    "lot": "Baiterek BC",
+    "chain": "Sepolia"
+  },
+  "kyc": {
+    "connect": "Connect wallet",
+    "checking": "Checking on-chain KYC…",
+    "verified": "KYC Verified (OnchainID)",
+    "required": "KYC Required / Unverified",
+    "pending": "Pending KYC",
+    "rejected": "KYC rejected",
+    "green": "KYC Green"
+  },
+  "home": {
+    "kicker": "AIFC · EGKN · ERC-3643",
+    "title": "Institutional market infrastructure for tokenized commercial real estate.",
+    "body": "File KYC/KYB, wait for compliance approval, then the issuer registers OnchainID and mints MULK against a live EGKN proof.",
+    "connectCta": "Connect wallet",
+    "step1": "Investor files the package",
+    "step2": "Admin approves KYC/KYB",
+    "step3": "Issuer registerIdentity",
+    "step4": "Transfer or verifiedMint",
+    "investorTitle": "Onboarding, KYC, MULK transfer",
+    "investorBody": "Connect MetaMask, file KYC/KYB, then sell via MulkToken.transfer after OnchainID is verified.",
+    "issuerTitle": "Verified mint and OnchainID",
+    "issuerBody": "Register only admin-approved wallets, then fill primary subscriptions with verifiedMint.",
+    "adminTitle": "Compliance workbench",
+    "adminBody": "Review KYC/KYB dossiers, approve or reject with an audit trail. Admin never calls registerIdentity.",
+    "liveLot": "Working lot",
+    "egkn": "EGKN"
+  },
+  "admin": {
+    "gateTitle": "Compliance console",
+    "gateBody": "Connect an allowlisted officer wallet to review investor packages.",
+    "forbidden": "This wallet is not on the admin allowlist.",
+    "statsSubmitted": "Submitted",
+    "statsApproved": "Approved",
+    "statsRejected": "Rejected",
+    "statsInvestors": "Investors",
+    "queueTitle": "KYC / KYB queue",
+    "queueHint": "Off-chain packages. Issuer sees only approved wallets.",
+    "investorsTitle": "Investor registry",
+    "dossier": "Dossier",
+    "approve": "Approve",
+    "reject": "Reject",
+    "notes": "Notes",
+    "notesRequired": "Notes are required to reject.",
+    "kindKyc": "Individual KYC",
+    "kindKyb": "Legal entity KYB",
+    "empty": "No applications in this filter.",
+    "audit": "Audit trail",
+    "onchain": "On-chain isVerified",
+    "filterAll": "All",
+    "open": "Open"
+  },
+  "issuer": {
+    "readyTitle": "Ready for OnchainID",
+    "readyHint": "Admin-approved packages awaiting IdentityRegistry.registerIdentity.",
+    "readyEmpty": "No approved wallets waiting for on-chain KYC."
+  },
+  "trade": {
+    "kicker": "Secondary market",
+    "title": "Order terminal",
+    "description": "Executable settlement is MulkToken.transfer or issuer verifiedMint. The NAV ±10% book is indicative only."
+  },
+  "onboarding": {
+    "kicker": "Onboarding",
+    "title": "Register wallet",
+    "description": "Connect MetaMask, file the KYC/KYB package, then wait for compliance approval and issuer registerIdentity."
+  },
+  "empty": {
+    "generic": "Nothing to show yet."
+  },
+  "error": {
+    "title": "Something broke",
+    "retry": "Try again"
+  }
+}

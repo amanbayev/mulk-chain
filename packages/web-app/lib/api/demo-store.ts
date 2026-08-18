@@ -2,36 +2,31 @@ import { createHash, randomUUID } from "node:crypto";
 import { BAITEREK, DEFAULT_INVESTOR_ID, DEFAULT_INVESTOR_WALLET, DEFAULT_ONCHAIN_ID } from "@/lib/constants";
 import { collarBounds, DEFAULT_COLLAR_BPS, DEFAULT_SPV_RESERVE_BPS, inCollar, toBigInt } from "@/lib/money";
 import { previewYield, DEMO_HOLDERS } from "@/lib/yield-preview";
+import { fail } from "@/lib/api/errors";
+import { buildInvestorProfile, newApplication, uniqueProfiles } from "@/lib/api/identity";
 import type {
+  AdminStats,
+  ApplicationReviewStatus,
   AuctionStatus,
   CreateSubscriptionBody,
+  DecideApplicationBody,
   DividendRegister,
   InitKycBody,
   InvestorProfile,
+  KycApplication,
   ListedAsset,
   MintAuthorization,
   MintRequestBody,
   PortfolioResponse,
   RegisterAssetBody,
   RegisterInvestorBody,
+  ReviewEvent,
   SubmitOrderBody,
   SubmitOrderResponse,
   SubscriptionRequest,
   TriggerYieldBody,
   YieldHistoryResponse,
 } from "@/lib/api/types";
-
-interface DemoError extends Error {
-  status: number;
-  code: string;
-}
-
-function fail(status: number, code: string, message: string): never {
-  const error = new Error(message) as DemoError;
-  error.status = status;
-  error.code = code;
-  throw error;
-}
 
 function hashCadastre(cadastralNumber: string): `0x${string}` {
   return `0x${createHash("sha256").update(cadastralNumber.toUpperCase()).digest("hex")}`;
@@ -85,6 +80,7 @@ class DemoStore {
   mintLog: MintAuthorization[] = [];
   orders: LimitOrder[] = [];
   subscriptions: SubscriptionRequest[] = [];
+  applications: KycApplication[] = [];
   interval = {
     intervalId: `auc-${BAITEREK.assetId}`,
     assetId: BAITEREK.assetId,
@@ -131,9 +127,10 @@ class DemoStore {
       bin: BAITEREK.spvBin,
       legalName: "AIFC Growth Fund Ltd.",
       submittedAt: BAITEREK.createdAt,
+      reviewStatus: "APPROVED",
+      onchainConfirmed: true,
     };
-    this.profiles.set(profile.investorId, profile);
-    this.profiles.set(profile.wallet.toLowerCase(), profile);
+    this.storeProfile(profile);
     this.kyc.set(profile.investorId, { kycValid: true, investorClass: "INSTITUTIONAL" });
     this.balances.set(profile.investorId, new Map([[BAITEREK.assetId, 1_250n]]));
 
@@ -200,46 +197,25 @@ class DemoStore {
       investorClass: "RETAIL",
       kybStatus: "NOT_REQUIRED",
       submittedAt: new Date().toISOString(),
+      reviewStatus: "SUBMITTED",
     };
     this.storeProfile(profile);
+    const application = newApplication(profile);
+    profile.applicationId = application.id;
+    this.storeProfile(profile);
+    this.applications.push(application);
     return profile;
   }
 
   registerInvestor(body: RegisterInvestorBody): InvestorProfile {
-    if (!/^0x[0-9a-fA-F]{40}$/.test(body.wallet)) fail(400, "INVALID_WALLET", "wallet must be a 20-byte hex address");
-    const displayName = body.displayName.trim();
-    const email = body.email.trim();
-    if (!displayName || !email) fail(400, "INVALID_PROFILE", "displayName and email are required");
-    if (body.investorKind === "LEGAL_ENTITY") {
-      if (!body.bin?.trim() || !body.legalName?.trim()) {
-        fail(400, "KYB_REQUIRED", "Legal entity KYB requires BIN and legal name");
-      }
-    }
-    const wallet = body.wallet;
-    const investorId = wallet.toLowerCase();
-    const existing = this.findProfile(wallet);
-    const profile: InvestorProfile = {
-      investorId,
-      wallet,
-      onchainId: body.onchainId ?? wallet,
-      iban: existing?.iban ?? `KZ-IBAN-${wallet.slice(2, 10)}`,
-      whtBps: existing?.whtBps ?? "0",
-      email,
-      country: body.country ?? "KZ",
-      provider: "SUMSUB",
-      applicantId: `app-${investorId}`,
-      onboardingUrl: `https://kyc.mulk.chain/session/app-${investorId}?provider=SUMSUB`,
-      status: existing?.status === "VERIFIED" || body.onchainVerified ? "VERIFIED" : "PENDING_KYC",
-      displayName,
-      investorKind: body.investorKind,
-      investorClass: body.investorClass ?? "RETAIL",
-      kybStatus: body.investorKind === "LEGAL_ENTITY" ? "KYB_SUBMITTED" : "NOT_REQUIRED",
-      bin: body.bin?.trim(),
-      legalName: body.legalName?.trim(),
-      submittedAt: new Date().toISOString(),
-    };
+    const existing = this.findProfile(body.wallet);
+    const profile = buildInvestorProfile(body, existing);
+    const application = newApplication(profile);
+    profile.applicationId = application.id;
+    profile.reviewStatus = application.reviewStatus;
     this.storeProfile(profile);
-    this.kyc.set(investorId, {
+    this.applications.push(application);
+    this.kyc.set(profile.investorId, {
       kycValid: profile.status === "VERIFIED",
       investorClass: profile.investorClass ?? null,
     });
@@ -251,21 +227,85 @@ class DemoStore {
   }
 
   pendingKycApplications(): InvestorProfile[] {
-    const seen = new Set<string>();
-    const rows: InvestorProfile[] = [];
-    for (const profile of this.profiles.values()) {
-      const key = profile.wallet.toLowerCase();
-      if (seen.has(key) || profile.status !== "PENDING_KYC") continue;
-      seen.add(key);
-      rows.push(profile);
+    return uniqueProfiles(this.profiles.values()).filter(
+      (profile) => profile.reviewStatus === "APPROVED" && profile.status !== "VERIFIED",
+    );
+  }
+
+  listApplications(status?: ApplicationReviewStatus): KycApplication[] {
+    const rows = status ? this.applications.filter((row) => row.reviewStatus === status) : this.applications;
+    return [...rows]
+      .reverse()
+      .map((row) => ({ ...row, profile: this.findProfile(row.wallet) ?? row.profile }));
+  }
+
+  getApplication(id: string): KycApplication {
+    const row = this.applications.find((item) => item.id === id);
+    if (!row) fail(404, "APPLICATION_NOT_FOUND", `unknown application ${id}`);
+    return { ...row, profile: this.findProfile(row.wallet) ?? row.profile };
+  }
+
+  listInvestors(): InvestorProfile[] {
+    return uniqueProfiles(this.profiles.values());
+  }
+
+  adminStats(): AdminStats {
+    const investors = this.listInvestors();
+    return {
+      submitted: this.applications.filter((row) => row.reviewStatus === "SUBMITTED").length,
+      approved: this.applications.filter((row) => row.reviewStatus === "APPROVED").length,
+      rejected: this.applications.filter((row) => row.reviewStatus === "REJECTED").length,
+      investors: investors.length,
+    };
+  }
+
+  decideApplication(body: DecideApplicationBody): KycApplication {
+    const row = this.applications.find((item) => item.id === body.id);
+    if (!row) fail(404, "APPLICATION_NOT_FOUND", `unknown application ${body.id}`);
+    if (body.action === "REJECTED" && !body.notes?.trim()) {
+      fail(400, "NOTES_REQUIRED", "reject requires notes");
     }
-    return rows.sort((a, b) => (b.submittedAt ?? "").localeCompare(a.submittedAt ?? ""));
+    const now = new Date().toISOString();
+    const event: ReviewEvent = {
+      id: randomUUID(),
+      applicationId: row.id,
+      action: body.action,
+      reviewerWallet: body.reviewerWallet,
+      notes: body.notes?.trim(),
+      createdAt: now,
+    };
+    row.reviewStatus = body.action;
+    row.notes = body.notes?.trim();
+    row.reviewerWallet = body.reviewerWallet;
+    row.reviewedAt = now;
+    row.events.push(event);
+    const profile = this.findProfile(row.wallet);
+    if (profile) {
+      profile.reviewStatus = body.action;
+      profile.reviewNotes = row.notes;
+      profile.reviewedAt = now;
+      profile.reviewerWallet = body.reviewerWallet;
+      profile.applicationId = row.id;
+      profile.status = body.action === "REJECTED" ? "REJECTED" : "PENDING_KYC";
+      this.storeProfile(profile);
+      this.kyc.set(profile.investorId, {
+        kycValid: false,
+        investorClass: profile.investorClass ?? null,
+      });
+      row.profile = profile;
+    }
+    return this.getApplication(row.id);
   }
 
   confirmKyc(wallet: string): InvestorProfile {
     const profile = this.findProfile(wallet);
     if (!profile) fail(404, "INVESTOR_NOT_FOUND", `unknown wallet ${wallet}`);
+    if (profile.reviewStatus !== "APPROVED" && profile.status !== "VERIFIED") {
+      fail(409, "NOT_APPROVED", "admin must approve the KYC/KYB package before on-chain confirm");
+    }
     profile.status = "VERIFIED";
+    profile.reviewStatus = "APPROVED";
+    profile.onchainConfirmed = true;
     this.storeProfile(profile);
     this.kyc.set(profile.investorId, {
       kycValid: true,
@@ -504,6 +544,4 @@ const globalStore = globalThis as typeof globalThis & { __mulkDemo?: DemoStore }
 export const demoStore = globalStore.__mulkDemo ?? new DemoStore();
 globalStore.__mulkDemo = demoStore;
 
-export function isDemoError(error: unknown): error is DemoError {
-  return Boolean(error && typeof error === "object" && "status" in error && "code" in error);
-}
+export { isDemoError } from "@/lib/api/errors";

@@ -1,6 +1,10 @@
 import type { Metadata } from "next";
+import type { ReactNode } from "react";
+import { cookies } from "next/headers";
 import { IBM_Plex_Mono, IBM_Plex_Sans } from "next/font/google";
+import { NextIntlClientProvider } from "next-intl";
 import { Providers } from "./providers";
+import { DEFAULT_LOCALE, isAppLocale } from "@/lib/i18n/config";
 import "./globals.css";
 
 const sans = IBM_Plex_Sans({
@@ -25,11 +29,17 @@ export const metadata: Metadata = {
   description: "Institutional RWA market infrastructure for AIFC commercial real estate.",
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: ReactNode }) {
+  const cookie = cookies().get("NEXT_LOCALE")?.value;
+  const locale = isAppLocale(cookie) ? cookie : DEFAULT_LOCALE;
+  const messages = (await import(`../messages/${locale}.json`)).default;
+
   return (
-    <html lang="en" suppressHydrationWarning className={`${sans.variable} ${mono.variable}`}>
+    <html lang={locale} suppressHydrationWarning className={`${sans.variable} ${mono.variable}`}>
       <body className="min-h-screen font-sans">
-        <Providers>{children}</Providers>
+        <NextIntlClientProvider locale={locale} messages={messages} timeZone="Asia/Almaty">
+          <Providers>{children}</Providers>
+        </NextIntlClientProvider>
       </body>
     </html>
   );
