@@ -263,10 +263,19 @@ npm run bootstrap          # OpenZeppelin v5.2 + forge-std
 
 ### Windows — одна команда
 
-Поднимает Postgres/Redis, Anvil, деплой, API Gateway и веб-консоль, затем открывает браузер:
+Поднимает Anvil, деплой, API Gateway и веб-консоль, затем открывает браузер. Docker Desktop **не обязателен**: без него шлюз работает in-memory (Postgres/Redis нужны только для постоянного FIFO).
 
-```bash
-npm run demo
+Если PowerShell пишет, что выполнение сценариев отключено (`npm.ps1` / `UnauthorizedAccess`), не вызывайте `npm` напрямую — используйте `.cmd`:
+
+```bat
+.\demo.cmd
+```
+
+Либо один раз разрешите скрипты для текущего пользователя (стандартный фикс Node.js на Windows):
+
+```powershell
+Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
+npm.cmd run demo
 ```
 
 Консоль: http://localhost:3000 · OpenAPI: http://127.0.0.1:8787/api/v1/docs
@@ -303,6 +312,51 @@ npm run build -w @mulk-chain/oracle-service
 ### Переменные окружения
 
 Скопируйте `.env.example`. Ключ Gov-Oracle — в HSM/KMS, **не коммитится**. Пять ключей Enforcement принадлежат разным должностным лицам (порог 3-of-5). Agent-ключи токена не совмещаются с oracle signer.
+
+Шаблон для Vercel: [`packages/web-app/.env.production.example`](packages/web-app/.env.production.example). В клиентский бандл попадают только `NEXT_PUBLIC_*`. Приватные ключи и Alchemy-секреты туда не ставятся.
+
+### Публичный деплой на Vercel (Arbitrum Sepolia)
+
+Консоль живёт в workspace `@mulk-chain/web-app` и не импортирует `packages/core-backend`. Корневой [`vercel.json`](vercel.json) ставит `installCommand` / `buildCommand` из корня монорепо. **Root Directory** в дашборде оставьте `.` (корень). Поле `outputDirectory` не задаётся: Vercel сам забирает Next.js Build Output API; указание `packages/web-app/.next` ломает деплой.
+
+**Dashboard**
+
+1. [vercel.com/new](https://vercel.com/new) → Import Git Repository → этот репозиторий.
+2. Framework Preset: Next.js. Root Directory: пусто / `.`.
+3. Build & Development Settings можно не трогать — их перекрывает `vercel.json`.
+4. Environment Variables → Production (и Preview при необходимости) — значения из `.env.production.example`.
+5. Deploy.
+
+**CLI**
+
+```bash
+npm i -g vercel
+cd /path/to/mulk-chain
+vercel login
+vercel          # preview
+vercel --prod   # production
+```
+
+CLI подхватит корневой `vercel.json`. Env можно залить так:
+
+```bash
+vercel env add NEXT_PUBLIC_CHAIN_ID production
+```
+
+Переменные для Production:
+
+| Name | Value |
+|---|---|
+| `NEXT_PUBLIC_CHAIN_ID` | `421614` |
+| `NEXT_PUBLIC_RPC_URL` | `https://sepolia-rollup.arbitrum.io/rpc` |
+| `NEXT_PUBLIC_MULK_TOKEN_ADDRESS` | `0x6e6d979a8cBC79d3cbc641403aD25C6234E97c83` |
+| `NEXT_PUBLIC_IDENTITY_REGISTRY_ADDRESS` | `0x0e9104384A82B6AA71BE351d2ECEc7B2C94e4254` |
+| `NEXT_PUBLIC_GOV_ORACLE_ADDRESS` | `0x6d1331fc9Cdb92838D619557A881d0DeE57Db2d6` |
+| `NEXT_PUBLIC_ENFORCEMENT_CONTROLLER_ADDRESS` | `0x4ac035249b770E911D48fc30402f06984870Efd1` |
+| `NEXT_PUBLIC_EXPLORER_URL` | `https://sepolia.arbiscan.io` |
+| `ARBITRUM_SEPOLIA_RPC_URL` | `https://sepolia-rollup.arbitrum.io/rpc` |
+
+`ARBITRUM_SEPOLIA_RPC_URL` — server-only для `/api/rpc`. Кошелёк без сети 421614 получит `wallet_switchEthereumChain` / `wallet_addEthereumChain`.
 
 ### REST API Gateway
 

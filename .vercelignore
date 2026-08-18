@@ -1,0 +1,15 @@
+.git
+.next
+node_modules
+logs
+broadcast
+cache
+out
+packages/contracts/out
+packages/contracts/cache
+packages/web-app/.next
+**/.env
+**/.env.local
+**/.env.*.local
+*.log
+coverage

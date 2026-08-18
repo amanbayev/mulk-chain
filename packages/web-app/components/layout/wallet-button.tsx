@@ -2,6 +2,7 @@
 
 import { Wallet } from "lucide-react";
 import { useAccount, useConnect, useDisconnect } from "wagmi";
+import { arbitrumSepolia } from "wagmi/chains";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { shortAddress } from "@/lib/utils";
@@ -19,7 +20,7 @@ export function WalletButton() {
         variant="outline"
         size="sm"
         disabled={isPending || !injected}
-        onClick={() => injected && connect({ connector: injected })}
+        onClick={() => injected && connect({ connector: injected, chainId: arbitrumSepolia.id })}
       >
         <Wallet className="mr-2 h-3.5 w-3.5" />
         Connect
