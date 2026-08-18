@@ -1,5 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
-import { demoStore, isDemoError } from "@/lib/api/demo-store";
+import { authorizeAdmin, isAdminWallet } from "@/lib/api/admin-auth";
+import { demoStore } from "@/lib/api/demo-store";
+import { isDemoError } from "@/lib/api/errors";
+import {
+  persistAdminStats,
+  persistConfirmKyc,
+  persistCreateSubscription,
+  persistDecideApplication,
+  persistFillSubscription,
+  persistGetApplication,
+  persistListApplications,
+  persistListInvestors,
+  persistListSubscriptions,
+  persistPendingKycApplications,
+  persistProfileByWallet,
+  persistRegisterInvestor,
+} from "@/lib/api/persist";
+import type { ApplicationReviewStatus, DecideApplicationBody } from "@/lib/api/types";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -32,34 +49,65 @@ async function handleDemo(request: NextRequest, path: string[]): Promise<NextRes
       return json(demoStore.initKyc(await request.json()), 201);
     }
     if (request.method === "POST" && route === "/investor/register") {
-      return json(demoStore.registerInvestor(await request.json()), 201);
+      return json(await persistRegisterInvestor(await request.json()), 201);
     }
     if (request.method === "GET" && route === "/investor/profile") {
       const wallet = search.get("wallet");
       if (!wallet) return json({ code: "MISSING_WALLET", message: "wallet query is required" }, 400);
-      const profile = demoStore.profileByWallet(wallet);
+      const profile = await persistProfileByWallet(wallet);
       if (!profile) return json({ code: "INVESTOR_NOT_FOUND", message: `unknown wallet ${wallet}` }, 404);
       return json(profile);
     }
     if (request.method === "GET" && route === "/issuer/kyc/applications") {
-      return json(demoStore.pendingKycApplications());
+      return json(await persistPendingKycApplications());
     }
     if (request.method === "POST" && route === "/issuer/kyc/confirm") {
       const body = (await request.json()) as { wallet?: string };
       if (!body.wallet) return json({ code: "MISSING_WALLET", message: "wallet is required" }, 400);
-      return json(demoStore.confirmKyc(body.wallet));
+      return json(await persistConfirmKyc(body.wallet));
     }
     if (request.method === "POST" && route === "/investor/subscribe") {
-      return json(demoStore.createSubscription(await request.json()), 201);
+      return json(await persistCreateSubscription(await request.json()), 201);
     }
     if (request.method === "GET" && route === "/issuer/subscriptions") {
       const status = search.get("status");
-      return json(demoStore.listSubscriptions(status === "PENDING" || status === "FILLED" ? status : undefined));
+      return json(await persistListSubscriptions(status === "PENDING" || status === "FILLED" ? status : undefined));
     }
     if (request.method === "POST" && route === "/issuer/subscriptions/fill") {
       const body = (await request.json()) as { id?: string };
       if (!body.id) return json({ code: "MISSING_ID", message: "id is required" }, 400);
-      return json(demoStore.fillSubscription(body.id));
+      return json(await persistFillSubscription(body.id));
+    }
+    if (request.method === "GET" && route === "/admin/session") {
+      const wallet = request.headers.get("x-admin-wallet") ?? search.get("wallet");
+      return json({ authorized: isAdminWallet(wallet) });
+    }
+    if (route.startsWith("/admin/")) {
+      const gate = authorizeAdmin(request.headers);
+      if (!gate.ok) return json({ code: "FORBIDDEN", message: gate.message }, gate.status);
+    }
+    if (request.method === "GET" && route === "/admin/stats") {
+      return json(await persistAdminStats());
+    }
+    if (request.method === "GET" && route === "/admin/applications") {
+      const status = search.get("status") as ApplicationReviewStatus | null;
+      const allowed = status === "SUBMITTED" || status === "APPROVED" || status === "REJECTED" ? status : undefined;
+      return json(await persistListApplications(allowed));
+    }
+    if (request.method === "GET" && route === "/admin/investors") {
+      return json(await persistListInvestors());
+    }
+    if (request.method === "GET" && route.startsWith("/admin/applications/")) {
+      const id = path[2];
+      if (!id) return json({ code: "MISSING_ID", message: "application id is required" }, 400);
+      return json(await persistGetApplication(id));
+    }
+    if (request.method === "POST" && route === "/admin/applications/decide") {
+      const body = (await request.json()) as DecideApplicationBody;
+      if (!body.id || !body.action || !body.reviewerWallet) {
+        return json({ code: "INVALID_BODY", message: "id, action and reviewerWallet are required" }, 400);
+      }
+      return json(await persistDecideApplication(body));
     }
     if (request.method === "GET" && route === "/investor/portfolio") {
       const investorId = search.get("investorId");
